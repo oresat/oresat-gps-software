@@ -1,0 +1,38 @@
+see GNSS-SDR website or default GNSS-SDR install
+    https://gnss-sdr.org/build-and-install/
+
+##############################################################################
+General process for debian for OreSat's GNSS-SDR
+
+Dependencies
+    sudo apt install build-essential cmake git libboost-dev \
+    libboost-date-time-dev libboost-system-dev libboost-filesystem-dev \
+    libboost-thread-dev libboost-chrono-dev libboost-serialization-dev \
+    libboost-program-options-dev libboost-test-dev liblog4cpp5-dev \
+    libuhd-dev gnuradio-dev gr-osmosdr libblas-dev liblapack-dev \
+    libarmadillo-dev libgflags-dev libgoogle-glog-dev libhdf5-dev \
+    libgnutls-openssl-dev libmatio-dev python-mako python-six \
+    libpcap-dev libgtest-dev googletest
+
+install
+    git clone https://github.com/oresat/oresat-gps-software.git
+    cd oresat-gps-software/gnss-sdr/build
+    cmake ..
+    make
+    sudo make install
+
+install (with ninja)
+sudo apt install ninja-build
+    git clone https://github.com/oresat/oresat-gps-software.git
+    cd oresat-gps-software/gnss-sdr/build
+    cmake -GNINJA ..
+    ninja
+    sudo ninja install
+
+test install
+    gnss-sdr --version
+
+volk setup
+    volk_profile
+    volk_gnsssdr_profile
+

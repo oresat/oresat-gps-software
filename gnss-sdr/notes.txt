@@ -1,0 +1,26 @@
+gnss-sdr notes
+
+
+Removed from gnss-sdr:
+    Doxygen
+    some optional rf front-end drivers
+    Opencl
+    fpga
+    CUDA
+    AGPS
+    SUPL
+
+
+
+to remove:
+    the rest of optional rf front-end driver
+    all non gps L1:
+        Glonass L1 C/A
+        Galileo E1 B/C
+        Glonass L2 C/A
+        GPS L2 L2CM
+        Galileo E5a
+        GPS L5
+    telecommand
+    all non rinex output data
+    monitor (udp)
