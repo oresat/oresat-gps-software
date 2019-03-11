@@ -5,8 +5,6 @@ In the BBB console type the following
     ifconfig usb0 192.168.7.2
     route add default gw 192.168.7.1
 
- 
-
 In the linux console of host system type
     sudo su
     #wlan0 is my internet facing interface, eth5 is the BeagleBone USB connection
