@@ -1,0 +1,53 @@
+The FTDI driver can be installed in linux somewhat like:
+
+wget https://www.ftdichip.com/Drivers/D2XX/Linux/libftd2xx-x86_64-1.4.8.gz
+
+
+
+gunzip libftd2xx-x86_64-1.4.8.gz
+
+tar -xvf libftd2xx-x86_64-1.4.8
+
+
+
+cd release/build
+
+sudo cp libftd2xx.a /usr/local/lib
+
+sudo cp libftd2xx.so.1.4.8 /usr/local/lib
+
+cd /usr/local/lib
+
+sudo ln -s libftd2xx.so.1.4.8 libftd2xx.so
+
+sudo chmod 0755 libftd2xx.so.1.4.8 
+
+
+
+##############################################
+
+To connect the GPS_USB board:
+
+#attach board
+
+
+dmesg | grep FTDI
+
+
+#(should show that board is recognized)
+
+# Need to do the following to use the FTDI driver:
+sudo rmmod ftdi_sio
+
+sudo rmmod usbserial
+
+
+sudo ldconfig
+(sometimes seems better to plug in board and do the above right away)
+
+# Run a prog to capture some samples:
+
+
+
+sudo ./Setup_2232H_Test
+
