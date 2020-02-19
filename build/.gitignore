@@ -1,0 +1,16 @@
+oresat-gps
+*.o
+*.a
+CMakeCache.txt
+CMakeFiles
+*.cmake
+install_manifest.txt
+_CPack_Packages
+install_manifest.txt
+rules.ninja
+Makefile
+build.ninja
+.ninja_deps
+.ninja_log
+rules.ninja
+*.deb

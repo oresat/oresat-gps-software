@@ -1,0 +1,13 @@
+[Unit]
+Description=OreSat SDR GPS
+
+[Service]
+Type=forking
+PIDFile=/run/oresat-gps.pid
+ExecStart=/usr/bin/oresat-gps -d
+Restart=on-failure
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
