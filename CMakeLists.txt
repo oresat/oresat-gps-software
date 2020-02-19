@@ -74,10 +74,10 @@ target_compile_options(oresat-gps PUBLIC ${LIBSYSTEMD_CFLAGS_OTHER})
 # Install
 
 # Binaries
-install(TARGETS candaemon DESTINATION /usr/bin)
+install(TARGETS oresat-gps DESTINATION /usr/bin)
 
 # Daemon service file
-install(FILES oresat-candaemon.service DESTINATION /lib/systemd/system)
+install(FILES oresat-gpsd.service DESTINATION /lib/systemd/system)
 
 # DBus config file
 install(FILES org.OreSat.GPS.conf DESTINATION /usr/share/dbus-1/system.d)
