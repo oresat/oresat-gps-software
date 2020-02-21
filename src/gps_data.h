@@ -1,22 +1,15 @@
 
+struct XYZ {
+    float x;
+    float y;
+    float z;
+};
 
 
 struct GPS_ECEF_data {
-    struct position {
-        float x;
-        float y;
-        float z;
-    };
-    struct velocity {
-        float x;
-        float y;
-        float z;
-    };
-    struct acceleration {
-        float x;
-        float y;
-        float z;
-    };
+    XYZ position;
+    XYZ velocity;
+    XYZ acceleration;
     //TODO time, UTC or GPS-UTC time???
 };
 

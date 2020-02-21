@@ -5,13 +5,13 @@
 #include "controller.h"
 #include "log_message.h"
 
-#define DEFAULT_PID_FILE        "/run/oresat-gps.pid"
+#define DEFAULT_PID_FILE        "/run/oresat-gpsd.pid"
 static bool                     daemon_flag = false;
 
 
 int main (int argc, char *argv[]) {
     int c;
-    char *pid_file = DEFAULT_PID_FILE;
+    std::string pid_file(DEFAULT_PID_FILE);
     FILE *run_fp = NULL;
     pid_t pid = 0, sid = 0;
 
@@ -24,7 +24,6 @@ int main (int argc, char *argv[]) {
         switch (c) {
             case 'd':
                 daemon_flag = true;
-                break;
                 break;
             case '?':
                 fprintf(stderr, "Uknown flag\n");
@@ -54,8 +53,8 @@ int main (int argc, char *argv[]) {
 
         /* Child process continues on */
         /* Log PID */
-        if ((run_fp = fopen(pid_file, "w+")) == NULL) {
-            log_message(LOG_ERR, "Error: Unable to open file %s\n", pid_file);
+        if ((run_fp = fopen(pid_file.c_str(), "w+")) == NULL) {
+            log_message(LOG_ERR, "Error: Unable to open file %s\n", pid_file.c_str());
             exit(EXIT_FAILURE);
         }
         fprintf(run_fp, "%d\n", getpid());

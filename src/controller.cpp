@@ -21,6 +21,12 @@ int gps_data_cb(sd_bus *bus,
     return 1;
 }
 
+struct GPS_Exception : public std::exception{
+    const char *what () const throw () {
+    	return "C++ Exception";
+    }
+}
+
 Controller::
 Controller() : _ECEF_data() {
     int r;
@@ -33,11 +39,14 @@ Controller() : _ECEF_data() {
 
     /* Connect to the bus */
     r = sd_bus_open_system(&_bus);
-    log_message(LOG_ERR, "Failed to connect to system bus.");
+    if(r > 0)
+        log_message(LOG_ERR, "Failed to connect to system bus.");
+        std::exception& e
 
     /* Take a well-known service name so that clients can find us */
     r = sd_bus_request_name(_bus, DESTINATION, SD_BUS_NAME_ALLOW_REPLACEMENT);
-    log_message(LOG_ERR, "Failed to acquire service name.\n");
+    if(r > 0)
+        log_message(LOG_ERR, "Failed to acquire service name.");
 
     /* Install the vtable */
     r = sd_bus_add_object_vtable(_bus,
@@ -45,15 +54,17 @@ Controller() : _ECEF_data() {
                                  OBJECT_PATH,
                                  INTERFACE_NAME,
                                  vtable,
-                                 &_ECEF_data);
-    log_message(LOG_ERR, "Failed to add vtable.");
+                                 &_ECEF_data.position); // TODO only pos
+    if(r > 0)
+        log_message(LOG_ERR, "Failed to add vtable.");
 }
 
 
 Controller::
 ~Controller() {
     int r = sd_bus_release_name(_bus, DESTINATION);
-    log_message(LOG_ERR, "Failed to release service name.");
+    if(r > 0)
+        log_message(LOG_ERR, "Failed to release service name.");
 
     sd_bus_slot_unref(_slot);
     sd_bus_unref(_bus);
@@ -67,14 +78,16 @@ run() { // TODO change to a thread
     while(_running) {
         /* Process requests */
         r = sd_bus_process(_bus, NULL);
-        log_message(LOG_ERR, "Failed to process bus.");
+        if(r > 0)
+            log_message(LOG_ERR, "Failed to process bus.");
 
         if (r > 0) /* we processed a request, try to process another one, right-away */
             continue;
 
         /* Wait for the next request to process */
         r = sd_bus_wait(_bus, (uint64_t) -1);
-        log_message(LOG_ERR, "Failed to wait on bus.");
+        if(r > 0)
+            log_message(LOG_ERR, "Failed to wait on bus.");
     }
 
     return 1;
