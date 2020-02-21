@@ -54,10 +54,10 @@ set(SRC_DIR src)
 include_directories(${SRC_DIR})
 
 set(SOURCE_FILES
-    ${SRC_DIR}/main.cpp
-    ${SRC_DIR}/controller.cpp
-    ${SRC_DIR}/state_machine.cpp
-    ${SRC_DIR}/log_message.cpp
+    ${SRC_DIR}/main.cc
+    ${SRC_DIR}/controller.cc
+    ${SRC_DIR}/state_machine.cc
+    ${SRC_DIR}/log_message.cc
 )
 
 

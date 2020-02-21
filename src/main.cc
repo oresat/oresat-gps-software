@@ -1,12 +1,11 @@
+#include "controller.h"
+#include "log_message.h"
 #include <iostream>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "controller.h"
-#include "log_message.h"
 
 #define DEFAULT_PID_FILE        "/run/oresat-gpsd.pid"
-static bool                     daemon_flag = false;
 
 
 int main (int argc, char *argv[]) {
@@ -14,6 +13,7 @@ int main (int argc, char *argv[]) {
     std::string pid_file(DEFAULT_PID_FILE);
     FILE *run_fp = NULL;
     pid_t pid = 0, sid = 0;
+    bool daemon_flag = false;
 
     // Register signal handlers
     signal(SIGINT, NULL);
