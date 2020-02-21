@@ -1,0 +1,6 @@
+[submodule "src/gnss-sdr"]
+	path = src/gnss-sdr
+	url = https://github.com/gnss-sdr/gnss-sdr
+[submodule "src/sgp4"]
+	path = src/sgp4
+	url = https://github.com/dnwrnr/sgp4
