@@ -1,29 +1,33 @@
-#include <mutex>
 #include <systemd/sd-bus.h>
-#include "state_machine.h"
-#include "gps_data.h"
+#include <mutex>
 
 
-
-
-/*
- * Dbus interface and main class for controlling gps process/daemon.
- */
-class Controller {
-    public:
-        Controller();
-        ~Controller();
-        int run();
-        int quit();
-
-    private:
-        int _running;
-        StateMachine _state_machine;
-        GPS_ECEF_data _ECEF_data;
-        sd_bus_slot * _slot;
-        sd_bus * _bus;
-        std::mutex controller_mutex;
+struct XYZ {
+    XYZ() : x(0.0), y(0.0), z(0.0) {};
+    double x;
+    double y;
+    double z;
 };
 
 
+struct StateVector {
+    StateVector() : time(0) {};
+    XYZ position;
+    XYZ velocity;
+    int32_t time; // TODO UTC
+    std::mutex sv_mutex;
+};
+
+
+enum states {
+    Sleep = 0,
+    Error = 1,
+    ParseTLE = 2,
+    SaveSignal = 3,
+    ProcessSignal = 4,
+};
+
+
+bool change_state(const int & new_state);
+int gps_wrapper_main();
 

@@ -37,5 +37,3 @@ public:
    const std::string m_msg;
 };
 
-
-throw (MyException(std::string("MyException thrown"));

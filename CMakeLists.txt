@@ -3,6 +3,27 @@ project(oresat-gps CXX)
 
 
 ##############################################################################
+# Release vs debug modes (set CXXFLAGS, LDFLAGS, etc)
+# to use: cmake -DCMAKE_BUILD_TYPE=Debug .
+
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
+if(COMPILER_SUPPORTS_CXX11)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+else()
+    message(SEND_ERROR "The compiler ${CMAKE_CXX_COMPILER} doesnt support C++11.")
+endif()
+
+
+# default to release
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+##############################################################################
 # Deal with dependencies
 
 # pthreads
@@ -14,20 +35,6 @@ find_package(PkgConfig REQUIRED)
 
 # libsystemd
 pkg_check_modules(LIBSYSTEMD REQUIRED libsystemd)
-
-
-##############################################################################
-# Release vs debug modes (set CXXFLAGS, LDFLAGS, etc)
-# to use: cmake -DCMAKE_BUILD_TYPE=Debug .
-
-# default to release
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
-endif()
-
-set(CMAKE_CXX_FLAGS "-Wall")
-set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 
 ##############################################################################
@@ -49,15 +56,32 @@ endif()
 
 # all paths to source directories
 set(SRC_DIR src)
+set(SGP4_DIR src/sgp4/libsgp4)
 
 # add all headers in source directories
 include_directories(${SRC_DIR})
+include_directories(${SGP4_DIR})
 
 set(SOURCE_FILES
     ${SRC_DIR}/main.cc
     ${SRC_DIR}/controller.cc
-    ${SRC_DIR}/state_machine.cc
     ${SRC_DIR}/log_message.cc
+    ${SGP4_DIR}/CoordGeodetic.cc
+    ${SGP4_DIR}/CoordTopocentric.cc
+    ${SGP4_DIR}/DateTime.cc
+    ${SGP4_DIR}/DecayedException.cc
+    ${SGP4_DIR}/Eci.cc
+    ${SGP4_DIR}/Globals.cc
+    ${SGP4_DIR}/Observer.cc
+    ${SGP4_DIR}/OrbitalElements.cc
+    ${SGP4_DIR}/SatelliteException.cc
+    ${SGP4_DIR}/SGP4.cc
+    ${SGP4_DIR}/SolarPosition.cc
+    ${SGP4_DIR}/TimeSpan.cc
+    ${SGP4_DIR}/Tle.cc
+    ${SGP4_DIR}/TleException.cc
+    ${SGP4_DIR}/Util.cc
+    ${SGP4_DIR}/Vector.cc
 )
 
 

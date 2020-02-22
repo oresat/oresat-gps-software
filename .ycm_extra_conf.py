@@ -11,5 +11,6 @@ def Settings( **kwargs ):
             '-pthread',
             # includes
             '-I./src',
+            '-I./src/sgp4/libsgp4',
             ],
         }

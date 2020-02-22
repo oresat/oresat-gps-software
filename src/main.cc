@@ -85,8 +85,7 @@ int main (int argc, char *argv[]) {
         }
     }
 
-    Controller gps_controller;
-    gps_controller.run();
+    gps_wrapper_main();
 
     return 1;
 }
