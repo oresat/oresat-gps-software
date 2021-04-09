@@ -1,0 +1,2 @@
+oresat-gpsd.service /lib/systemd/system/
+org.OreSat.GSP.conf /usr/share/dbus-1/system.d/
