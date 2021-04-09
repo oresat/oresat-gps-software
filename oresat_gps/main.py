@@ -93,7 +93,7 @@ def main():
     log = logging.getLogger('oresat-gpsd')
 
     # make gps
-    gps = GPSServer(log)
+    gps = GPSServer(log, mock=True)
 
     # set up dbus wrapper
     bus = SystemBus()

@@ -6,7 +6,7 @@ from threading import Thread, Lock
 from time import sleep
 import io
 import pynmea2
-from serial import Serial
+from serial import Serial, SerialException
 from astropy.coordinates import EarthLocation
 
 
@@ -41,19 +41,21 @@ class GPSServer():
     <node>
         <interface name="org.OreSat.GPS">
             <property name="Status" type="y" access="read" />
-            <property name="LockedSatellites" type="y" access="read" />
+            <property name="Satellites" type="y" access="read" />
             <property name="StateVector" type="((ddd)(ddd)d)" access="read" />
         </interface>
     </node>
     """  # doesn't work in __init__()
 
-    def __init__(self, logger: Logger, port="/dev/ttyS1", baud=115200):
+    def __init__(self, logger: Logger, port="/dev/ttyS1", baud=115200, mock=None):
 
         self._log = logger
         self._status = State.SEARCHING
+        self._mock = mock
 
-        self._ser = Serial(port, baud, timeout=5.0)
-        self._sio = io.TextIOWrapper(io.BufferedRWPair(self._ser, self._ser))
+        if not self._mock:
+            self._ser = Serial(port, baud, timeout=5.0)
+            self._sio = io.TextIOWrapper(io.BufferedRWPair(self._ser, self._ser))
 
         self._satellites = 0
         self._state_vector = ((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0)
@@ -87,11 +89,34 @@ class GPSServer():
         self._log.debug("starting working loop")
 
         while self._running:
-            # line = self._sio.readline()
-            data = pynmea2.parse(MOCK_DATA)  # swap to line
-            # print(EarthLocation().from_geodetic(lon=0.0, lat=0.0, height=100))
-            print(repr(data))
-            sleep(1)
+            try:
+                if self._mock:
+                    sleep(1)
+                    line = MOCK_DATA
+                else:
+                    line = self._sio.readline()
+            except SerialException as e:
+                self._log.error('Device error: {}'.format(e))
+                self._status = State.HARDWARE_ERROR
+                continue
+
+            try:
+                data = pynmea2.parse(line)
+            except pynmea2.ParseError as e:
+                self._log.error('Parse error: {}'.format(e))
+                self._status = State.HARDWARE_ERROR
+                continue
+
+            # TODO change to locked state
+
+            # loc = EarthLocation().from_geodetic(lon=0.0, lat=0.0, height=100)
+            print(repr(data))  # TODO remove
+
+            self._mutex.acquire()
+            self._satellites = data.num_sats
+            # TODO use astropy to get ECEF coordinates
+            self._state_vector = ((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0)
+            self._mutex.release()
 
         self._log.debug("stoping working loop")
 
