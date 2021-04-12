@@ -11,7 +11,6 @@ from astropy.coordinates import EarthLocation
 
 
 DBUS_INTERFACE_NAME = "org.OreSat.GPS"
-MOCK_DATA = "$GPGGA,184353.07,1929.045,S,02410.506,E,1,04,2.6,100.00,M,-33.9,M,,0000*6D"
 
 
 class State(IntEnum):
@@ -51,14 +50,18 @@ class GPSServer():
 
         self._log = logger
         self._status = State.SEARCHING
+        self._satellites = 0
+        self._state_vector = ((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0)
         self._mock = mock
 
         if not self._mock:
             self._ser = Serial(port, baud, timeout=5.0)
             self._sio = io.TextIOWrapper(io.BufferedRWPair(self._ser, self._ser))
-
-        self._satellites = 0
-        self._state_vector = ((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0)
+        else:
+            with open(self._mock, "r") as fptr:
+                self._mock_data = fptr.readlines()
+            self._mock_data_len = len(self._mock_data)
+            self._mock_cur = 0
 
         # set up working thread
         self._running = False
@@ -92,7 +95,8 @@ class GPSServer():
             try:
                 if self._mock:
                     sleep(1)
-                    line = MOCK_DATA
+                    line = self._mock_data[self._mock_cur]
+                    self._mock_cur = (self._mock_cur + 1) % self._mock_data_len
                 else:
                     line = self._sio.readline()
             except SerialException as e:
@@ -111,9 +115,11 @@ class GPSServer():
 
             # loc = EarthLocation().from_geodetic(lon=0.0, lat=0.0, height=100)
             print(repr(data))  # TODO remove
+            print("")
 
             self._mutex.acquire()
-            self._satellites = data.num_sats
+            if data.sentence_type == 'GGA':
+                self._satellites = data.num_sats
             # TODO use astropy to get ECEF coordinates
             self._state_vector = ((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0)
             self._mutex.release()

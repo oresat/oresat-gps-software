@@ -74,6 +74,8 @@ def main():
                         help="daemonize the process")
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="enable debug log messaging")
+    parser.add_argument("-m", "--mock", action="store",
+                        help="path to gps data file")
     args = parser.parse_args()
 
     if args.daemon:
@@ -93,7 +95,7 @@ def main():
     log = logging.getLogger('oresat-gpsd')
 
     # make gps
-    gps = GPSServer(log, mock=True)
+    gps = GPSServer(log, mock=args.mock)
 
     # set up dbus wrapper
     bus = SystemBus()
