@@ -42,9 +42,9 @@ def main():
             line = ser.readline()
         except SerialException as exc:
             print('Device error: {}\n'.format(exc))
-        break
+            continue
 
-    fptr.write(line)
+        fptr.write(line)
 
 
 try:
