@@ -19,7 +19,8 @@ with open("/sys/class/gpio/gpio98/value", "w") as fptr:
 
 # open data file
 time_str = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-fptr = open("/home/oresat/skytraq_data_" + time_str + ".txt", "wb")
+fptr = open("skytraq_data_" + time_str + ".txt", "wb")
+# working directory assume debian user and repo in home dir
 
 
 def main():
@@ -53,3 +54,4 @@ except KeyboardInterrupt:
     fptr.close()
     with open("/sys/class/gpio/gpio98/value", "w") as fptr:
         fptr.write("0")
+    sys.exit()
