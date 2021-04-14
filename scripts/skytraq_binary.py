@@ -4,14 +4,14 @@ import sys
 import struct
 from serial import Serial, SerialException
 
-# first time will fail
 try:
+    # first time will fail
+    with open("/sys/class/gpio/export", "w") as fptr:
+        fptr.write("98")
     with open("/sys/class/gpio/export", "w") as fptr:
         fptr.write("98")
 except PermissionError:
     pass
-with open("/sys/class/gpio/export", "w") as fptr:
-    fptr.write("98")
 with open("/sys/class/gpio/gpio98/direction", "w") as fptr:
     fptr.write("out")
 with open("/sys/class/gpio/gpio98/value", "w") as fptr:
