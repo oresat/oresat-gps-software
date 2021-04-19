@@ -4,10 +4,9 @@ from logging import Logger
 from enum import IntEnum, auto
 from threading import Thread, Lock
 from datetime import datetime, timedelta, timezone
-from time import sleep, mktime
-import io
-import struct
+from time import clock_settime, CLOCK_REALTIME
 from serial import Serial, SerialException
+from oresat_gps.skytraq import NavData, parse_skytraq_binary
 
 
 DBUS_INTERFACE_NAME = "org.OreSat.GPS"
@@ -19,40 +18,17 @@ TOW_BASE = datetime(2019, 4, 7, tzinfo=timezone.utc)
 class State(IntEnum):
     """The states oresat gps daemon can be in."""
 
-    LOCKED = 0
-    """Locked on satellites.."""
-
-    SEARCHING = auto()
+    SEARCHING = 0
     """Looking for satellites."""
+
+    LOCKED = auto()
+    """Locked on satellites.."""
 
     HARDWARE_ERROR = auto()
     """Serial connection failed."""
 
     PARSER_ERROR = auto()
     """Binary message parser failed."""
-
-
-class NavData(IntEnum):
-    MESSAGE_ID = 0
-    FIX_MODE = 1
-    NUMBER_OF_SV = 2
-    GPS_WEEK = 3
-    TOW = 4
-    LATITUDE = 5
-    LONGITUDE = 6
-    ELLIPSOID_ALTITUDE = 7
-    MEAN_SEA_LVL_ALTITYDE = 8
-    GDOP = 9
-    PDOP = 10
-    HDOP = 11
-    VDOP = 12
-    TDOP = 13
-    ECEF_X = 14
-    ECEF_Y = 15
-    ECEF_Z = 16
-    ECEF_VX = 17
-    ECEF_VY = 18
-    ECEF_VZ = 19
 
 
 def gps_time(gps_week: int, tow: int) -> float:
@@ -91,7 +67,6 @@ class GPSServer():
                  logger: Logger,
                  port="/dev/ttyS1",
                  baud=115200,
-                 mock=None,
                  sync_time=False):
         """
         Attributes
@@ -99,11 +74,9 @@ class GPSServer():
         logger: logging.Logger
             Logger to use.
         port: str
-            Serial port to use if mock is not used.
+            Serial port to use.
         baud: str
-            Baud to use if mock is not used.
-        mock: str
-            Mock the serial port with file. Every line must be message.
+            Baud to use.
         time_sync: bool
             Set the system time on first lock.
         """
@@ -111,18 +84,9 @@ class GPSServer():
         self._log = logger
         self._status = State.SEARCHING
         self._sync_time = sync_time
-        self._data = b'\x00'*59
-        self._mock = mock
+        self._nav_data = tuple([0] * 20)
 
-        if not self._mock:
-            self._ser = Serial(port, baud, timeout=5.0)
-            io_pair = io.BufferedRWPair(self._ser, self._ser)
-            self._sio = io.TextIOWrapper(io_pair)
-        else:
-            with open(self._mock, "r") as fptr:
-                self._mock_data = fptr.readlines()
-            self._mock_data_len = len(self._mock_data)
-            self._mock_cur = 0
+        self._ser = Serial(port, baud, timeout=5.0)
 
         # set up working thread
         self._running = False
@@ -150,41 +114,39 @@ class GPSServer():
         thread, seperate from D-Bus.
         """
 
+        # swap to binary mode
+        self._ser.write(b'\xA0\xA1\x00\x03\x09\x02\x00\x0B\x0D\x0A')
+
         self._log.debug("starting working loop")
 
         while self._running:
             try:
-                if self._mock:
-                    sleep(1)
-                    line = self._mock_data[self._mock_cur]
-                    self._mock_cur = (self._mock_cur + 1) % self._mock_data_len
-                else:
-                    line = self._sio.readline()
+                line = self._ser.readline()
             except SerialException as exc:
                 self._log.error('Device error: {}'.format(exc))
                 self._status = State.HARDWARE_ERROR
                 continue
 
-            try:
-                data = struct.unpack('BBBHIiiIIHHHHHiiiiii', line)
-            except struct.error as exc:
-                self._log.error('Parse error: {}'.format(exc))
+            data = parse_skytraq_binary(line)
+            if not data:
                 self._status = State.PARSER_ERROR
                 continue
 
-            if self._sync_time and data[NavData.FIX_MODE.value] == 2:
-                gps_week = data[NavData.GPS_WEEK.value]
-                tow = data[NavData.TOW.value]
-                mktime(gps_time(gps_week, tow))
-                self._sync_time = False
+            if data[0] == 0xA8:
+                if data[NavData.FIX_MODE.value] == 2:
+                    gps_week = data[NavData.GPS_WEEK.value]
+                    tow = data[NavData.TOW.value]
+                    if not self._sync_time:  # need to sync_time
+                        clock_settime(CLOCK_REALTIME, gps_time(gps_week, tow))
+                        self._sync_time = True
 
-            self._mutex.acquire()
-            if data[NavData.FIX_MODE.value] == 2:
-                self._status = State.LOCKED
-            else:
-                self._status = State.SEARCHING
-            self._data = data
-            self._mutex.release()
+                self._mutex.acquire()
+                if data[NavData.FIX_MODE.value] == 2:
+                    self._status = State.LOCKED
+                else:
+                    self._status = State.SEARCHING
+                self._nav_nav_data = data
+                self._mutex.release()
 
         self._log.debug("stoping working loop")
 
@@ -195,7 +157,7 @@ class GPSServer():
 
     @Sync.setter
     def Sync(self):
-        self._sync_time = True
+        self._sync_time = False
 
     @property
     def Status(self):
@@ -205,7 +167,7 @@ class GPSServer():
     @property
     def Satellites(self):
         """uint8: Number of GPS satellites locked onto."""
-        return self._data[NavData.NUMBER_OF_SV.value]
+        return self._nav_data[NavData.NUMBER_OF_SV.value]
 
     @property
     def StateVector(self):
@@ -215,8 +177,8 @@ class GPSServer():
         """
 
         self._mutex.acquire()
-        gps_week = self._data[NavData.GPS_WEEK.value]
-        tow = self._data[NavData.TOW.value]
+        gps_week = self._nav_data[NavData.GPS_WEEK.value]
+        tow = self._nav_data[NavData.TOW.value]
         self._mutex.release()
 
         if tow > 0:  # avoid divide by 0
@@ -228,12 +190,12 @@ class GPSServer():
             time_fine = 0
 
         self._mutex.acquire()
-        temp = (self._data[NavData.ECEF_X.value],
-                self._data[NavData.ECEF_Y.value],
-                self._data[NavData.ECEF_Z.value],
-                self._data[NavData.ECEF_VX.value],
-                self._data[NavData.ECEF_VY.value],
-                self._data[NavData.ECEF_VZ.value],
+        temp = (self._nav_data[NavData.ECEF_X.value],
+                self._nav_data[NavData.ECEF_Y.value],
+                self._nav_data[NavData.ECEF_Z.value],
+                self._nav_data[NavData.ECEF_VX.value],
+                self._nav_data[NavData.ECEF_VY.value],
+                self._nav_data[NavData.ECEF_VZ.value],
                 time_coarse,
                 time_fine)
         self._mutex.release()
