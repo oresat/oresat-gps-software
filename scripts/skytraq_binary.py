@@ -3,19 +3,7 @@
 import sys
 import struct
 from serial import Serial, SerialException
-
-try:
-    # first time will fail
-    with open("/sys/class/gpio/export", "w") as fptr:
-        fptr.write("98")
-    with open("/sys/class/gpio/export", "w") as fptr:
-        fptr.write("98")
-except PermissionError:
-    pass
-with open("/sys/class/gpio/gpio98/direction", "w") as fptr:
-    fptr.write("out")
-with open("/sys/class/gpio/gpio98/value", "w") as fptr:
-    fptr.write("1")
+from oresat_gps.skytraq import power_on, power_off
 
 
 def main():
@@ -50,8 +38,8 @@ def main():
 
 
 try:
+    power_on()
     main()
 except KeyboardInterrupt:
-    with open("/sys/class/gpio/gpio98/value", "w") as fptr:
-        fptr.write("0")
+    power_off()
     sys.exit()
