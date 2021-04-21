@@ -11,6 +11,7 @@ from logging.handlers import SysLogHandler
 from pydbus import SystemBus
 from gi.repository import GLib
 from oresat_gps.gps import GPSServer, DBUS_INTERFACE_NAME
+from oresat_gps.skytraq import power_on, power_off
 
 
 def _daemonize(pid_file: str):
@@ -102,6 +103,8 @@ def main():
     bus.publish(DBUS_INTERFACE_NAME, gps)
     loop = GLib.MainLoop()
 
+    power_on()
+
     try:
         gps.run()
         loop.run()
@@ -113,6 +116,8 @@ def main():
         gps.quit()
         loop.quit()
         ret = 1
+
+    power_off()
 
     if args.daemon:
         os.remove(pid_file)  # clean up daemon

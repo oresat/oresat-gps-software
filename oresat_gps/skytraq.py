@@ -29,6 +29,42 @@ class NavData(IntEnum):
     ECEF_VZ = 19
 
 
+def power_on():
+    """ Turn the skytraq on"""
+    try:
+        # first time will fail
+        with open("/sys/class/gpio/export", "w") as fptr:
+            fptr.write("98")
+        with open("/sys/class/gpio/export", "w") as fptr:
+            fptr.write("98")
+    except PermissionError:
+        pass  # first time will fail
+    with open("/sys/class/gpio/gpio98/direction", "w") as fptr:
+        fptr.write("out")
+    with open("/sys/class/gpio/gpio98/value", "w") as fptr:
+        fptr.write("1")
+
+    try:
+        # first time will fail
+        with open("/sys/class/gpio/export", "w") as fptr:
+            fptr.write("100")
+        with open("/sys/class/gpio/export", "w") as fptr:
+            fptr.write("100")
+    except PermissionError:
+        pass  # first time will fail
+    with open("/sys/class/gpio/gpio100/direction", "w") as fptr:
+        fptr.write("out")
+    with open("/sys/class/gpio/gpio100/value", "w") as fptr:
+        fptr.write("1")
+
+
+def power_off():
+    with open("/sys/class/gpio/gpio98/value", "w") as fptr:
+        fptr.write("0")
+    with open("/sys/class/gpio/gpio100/value", "w") as fptr:
+        fptr.write("0")
+
+
 def parse_skytraq_binary(line) -> ():
     """Parse the skytraq binary message."""
 
