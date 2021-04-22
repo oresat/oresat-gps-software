@@ -78,7 +78,7 @@ def main():
             print('Parse error: {}\n'.format(exc))
             continue
 
-        fptr2.write(data[1:-1] + '\n')
+        fptr2.write(str(data[1:-1]) + '\n')
         fptr2.flush()
 
 
