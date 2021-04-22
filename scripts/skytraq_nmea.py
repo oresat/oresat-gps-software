@@ -4,13 +4,12 @@ import io
 import sys
 import pynmea2
 import serial
-from oresat_gps.skytraq import power_on, power_off
 
 
 def main():
     """loop and print data"""
 
-    ser = serial.Serial('/dev/ttyS2', 115200, timeout=5.0)
+    ser = serial.Serial('/dev/ttyS2', 9600, timeout=5.0)
     sio = io.TextIOWrapper(io.BufferedRWPair(ser, ser))
 
     while 1:
@@ -27,8 +26,6 @@ def main():
 
 
 try:
-    power_on()
     main()
 except KeyboardInterrupt:
-    power_off()
     sys.exit()

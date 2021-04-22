@@ -3,8 +3,8 @@ Description=SkyTraq binary message logger
 
 [Service]
 Type=simple
-WorkingDirectory=/home/oresat
-ExecStart=/usr/bin/python3 /home/oresat/oresat-gps-software/scripts/skytraq_binary_logger.py
+WorkingDirectory=/home/oresat/oresat-gps-software/scripts
+ExecStart=skytraq_logger.sh
 
 [Install]
 WantedBy=multi-user.target

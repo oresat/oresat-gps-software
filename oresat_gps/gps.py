@@ -65,8 +65,8 @@ class GPSServer():
 
     def __init__(self,
                  logger: Logger,
-                 port="/dev/ttyS1",
-                 baud=115200,
+                 port="/dev/ttyS2",
+                 baud=9600,
                  sync_time=False):
         """
         Attributes

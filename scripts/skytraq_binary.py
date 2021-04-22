@@ -3,17 +3,17 @@
 import sys
 import struct
 from serial import Serial, SerialException
-from oresat_gps.skytraq import power_on, power_off
 
 
 def main():
     """loop and print data"""
 
     # open serial
-    ser = Serial('/dev/ttyS2', 115200, timeout=5.0)
+    ser = Serial('/dev/ttyS2', 9600, timeout=5.0)
 
     # swap to binary mode
     ser.write(b'\xA0\xA1\x00\x03\x09\x02\x00\x0B\x0D\x0A')
+
     try:
         line = ser.readline()
     except SerialException as exc:
@@ -38,8 +38,6 @@ def main():
 
 
 try:
-    power_on()
     main()
 except KeyboardInterrupt:
-    power_off()
     sys.exit()
