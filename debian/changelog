@@ -1,6 +1,6 @@
-oresat-gpsd (0.1.0-0) unstable; urgency=low
+oresat-gps (0.1.0-0) unstable; urgency=low
 
   * inital package
 
- -- PSAS <oresat@pdx.edu>  Mon, 14 Dec 2020 21:07:50 +0000
+ -- PSAS <oresat@pdx.edu>  Thu, 22 Apr 2021 14:48:50 -0700
 
