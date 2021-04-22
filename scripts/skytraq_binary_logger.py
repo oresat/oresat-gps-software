@@ -8,7 +8,7 @@ from serial import Serial, SerialException
 # open data file
 time_str = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
 fptr = open("skytraq_data_" + time_str + ".txt", "wb")
-fptr2 = open("skytraq_bi_data_" + time_str + ".txt", "w")
+fptr2 = open("skytraq_bi_data_" + time_str + ".csv", "w")
 
 
 def power_on():
@@ -78,7 +78,7 @@ def main():
             print('Parse error: {}\n'.format(exc))
             continue
 
-        fptr2.write(data)
+        fptr2.write(data[1:-1] + '\n')
         fptr2.flush()
 
 
