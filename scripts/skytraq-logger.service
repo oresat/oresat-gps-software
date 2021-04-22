@@ -4,7 +4,7 @@ Description=SkyTraq binary message logger
 [Service]
 Type=simple
 WorkingDirectory=/home/oresat/oresat-gps-software/scripts
-ExecStart=skytraq_logger.sh
+WorkingDirectory=/home/oresat/oresat-gps-software/scripts/skytraq_logger.sh
 
 [Install]
 WantedBy=multi-user.target
