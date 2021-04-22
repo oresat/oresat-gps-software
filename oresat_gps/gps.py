@@ -127,10 +127,14 @@ class GPSServer():
                 self._status = State.HARDWARE_ERROR
                 continue
 
+            self._log.debug(line)
+
             data = parse_skytraq_binary(line)
             if not data:
                 self._status = State.PARSER_ERROR
                 continue
+
+            self._log.debug(data)
 
             if data[0] == 0xA8:
                 if data[NavData.FIX_MODE.value] == 2:

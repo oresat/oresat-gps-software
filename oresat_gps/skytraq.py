@@ -73,19 +73,14 @@ def parse_skytraq_binary(line) -> ():
     if len(line) < 7:
         return data
 
-    if line[:2] != b'\xA0\xA1' or line[:-2] != b'\x0D\x0A':
-        return data
+    #if line[:2] != b'\xA0\xA1' or line[:-2] != b'\x0D\x0A':
+    #    return data
 
     payload_len = line[2:]
     payload_len = payload_len[:2]
 
     try:
-        if line[3] == '\x83' and payload_len == b'\x00\x02':  # ACK
-            data = struct.unpack('=4x2B3x', line)
-        elif line[3] == '\x84' and payload_len == b'\x00\x02':  # ACK
-            data = struct.unpack('=4x2B3x', line)
-        elif line[3] == '\xA8' and payload_len == b'\x00\x3B':  # nav data
-            data = struct.unpack('=4x3BHI2i2I5H6i3x', line)
+        data = struct.unpack('=4x3BHI2i2I5H6i3x', line)
     except struct.error:
         data = None
 
