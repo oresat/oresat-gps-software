@@ -2,11 +2,13 @@
 
 import sys
 from datetime import datetime
+import struct
 from serial import Serial, SerialException
 
 # open data file
 time_str = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
 fptr = open("skytraq_data_" + time_str + ".txt", "wb")
+fptr2 = open("skytraq_bi_data_" + time_str + ".txt", "w")
 
 
 def power_on():
@@ -68,6 +70,16 @@ def main():
             continue
 
         fptr.write(line)
+        fptr.flush()
+
+        try:
+            data = struct.unpack('=4x3BHI2i2I5H6i3x', line)
+        except struct.error as exc:
+            print('Parse error: {}\n'.format(exc))
+            continue
+
+        fptr2.write(data)
+        fptr2.flush()
 
 
 try:
