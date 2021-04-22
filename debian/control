@@ -5,7 +5,7 @@ Priority: optional
 Build-Depends: python3-setuptools, python3-all, debhelper (>= 9)
 Homepage: https://github.com/oresat/oresat-gps-software
 
-Package: oresat-gp
+Package: oresat-gps
 Architecture: all
 Depends: libsystemd-dev, python3, python3-pydbus, python3-serial
 Description: A quick gps daemon with a D-Bus interface.
