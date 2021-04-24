@@ -1,6 +1,5 @@
 """OreSat Linux updater D-Bus server"""
 
-import io
 from logging import Logger
 from enum import IntEnum, auto
 from threading import Thread, Lock
@@ -30,6 +29,24 @@ class State(IntEnum):
 
     PARSER_ERROR = auto()
     """Binary message parser failed."""
+
+
+def _readline(ser):
+    """readline from serial, where line ends with '\r\n'"""
+    eol = b'\r\n'
+    leneol = len(eol)
+    line = bytearray()
+
+    while True:
+        c = ser.read(1)
+        if c:
+            line += c
+            if line[-leneol:] == eol:
+                break
+        else:
+            break
+
+    return bytes(line)
 
 
 def gps_time(gps_week: int, tow: int) -> float:
@@ -99,9 +116,6 @@ class GPSServer():
             # swap to binary mode
             self._ser.write(b'\xA0\xA1\x00\x03\x09\x02\x00\x0B\x0D\x0A')
 
-            self._sio = io.TextIOWrapper(
-                    io.BufferedRWPair(self._ser, self._ser), newline='\r\n')
-
         # set up working thread
         self._running = False
         self._working_thread = Thread(target=self._working_loop)
@@ -133,7 +147,7 @@ class GPSServer():
         while self._running:
             if self._mock is None:
                 try:
-                    line = self._sio.readline()
+                    line = _readline(self._ser)
                 except SerialException as exc:
                     self._log.error('Device error: {}'.format(exc))
                     self._status = State.HARDWARE_ERROR
