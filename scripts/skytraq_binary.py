@@ -30,8 +30,10 @@ def main():
             print('Device error: {}\n'.format(exc))
             break
 
+        print(line)
+
         try:
-            data = struct.unpack('=4x3BHI2i2I5H6i3x', line)
+            data = struct.unpack('>4x3BHI2i2I5H6i3x', line)
         except struct.error as exc:
             print('Parse error: {}\n'.format(exc))
             continue
