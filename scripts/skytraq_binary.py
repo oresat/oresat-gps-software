@@ -11,10 +11,11 @@ def main():
 
     # open serial
     ser = Serial('/dev/ttyS2', 9600, timeout=5.0)
-    sio = io.TextIOWrapper(io.BufferedRWPair(ser, ser), newline='\r\n')
 
     # swap to binary mode
-    sio.write(b'\xA0\xA1\x00\x03\x09\x02\x00\x0B\x0D\x0A')
+    ser.write(b'\xA0\xA1\x00\x03\x09\x02\x00\x0B\x0D\x0A')
+
+    sio = io.TextIOWrapper(io.BufferedRWPair(ser, ser), newline='\r\n')
 
     try:
         line = sio.readline()
