@@ -1,17 +1,18 @@
 """OreSat Linux updater D-Bus server"""
 
+import io
 from logging import Logger
 from enum import IntEnum, auto
 from threading import Thread, Lock
 from datetime import datetime, timedelta, timezone
-from time import clock_settime, CLOCK_REALTIME
+from time import clock_settime, CLOCK_REALTIME, sleep
 from serial import Serial, SerialException
 from oresat_gps.skytraq import NavData, parse_skytraq_binary
 
 
 DBUS_INTERFACE_NAME = "org.OreSat.GPS"
 
-TOW_BASE = datetime(2019, 4, 7, tzinfo=timezone.utc)
+GPS_EPOCH = datetime(1980, 1, 5, tzinfo=timezone.utc)
 """Last gps week rollover, note: next is in 2038"""
 
 
@@ -40,7 +41,7 @@ def gps_time(gps_week: int, tow: int) -> float:
     # 86400 is number of seconds in a day
     sec = (tow / 100) % 86400
     day = ((tow / 100) / 86400) + (gps_week * 7)
-    dt = TOW_BASE + timedelta(days=day, seconds=sec, microseconds=usec)
+    dt = GPS_EPOCH + timedelta(days=day, seconds=sec, microseconds=usec)
 
     return dt.timestamp()
 
@@ -67,7 +68,8 @@ class GPSServer():
                  logger: Logger,
                  port="/dev/ttyS2",
                  baud=9600,
-                 sync_time=False):
+                 sync_time=False,
+                 mock=""):
         """
         Attributes
         ----------
@@ -79,14 +81,26 @@ class GPSServer():
             Baud to use.
         time_sync: bool
             Set the system time on first lock.
+        mock: str
+            Path to file for mocking skytraq.
         """
 
         self._log = logger
         self._status = State.SEARCHING
         self._sync_time = sync_time
+        self._time_is_sync = False
         self._nav_data = tuple([0] * 20)
+        self._mock = mock
+        if self._mock:
+            self._mock_fptr = open(self._mock, "rb")
+        else:
+            self._ser = Serial(port, baud, timeout=5.0)
 
-        self._ser = Serial(port, baud, timeout=5.0)
+            # swap to binary mode
+            self._ser.write(b'\xA0\xA1\x00\x03\x09\x02\x00\x0B\x0D\x0A')
+
+            self._sio = io.TextIOWrapper(
+                    io.BufferedRWPair(self._ser, self._ser), newline='\r\n')
 
         # set up working thread
         self._running = False
@@ -114,20 +128,19 @@ class GPSServer():
         thread, seperate from D-Bus.
         """
 
-        # swap to binary mode
-        self._ser.write(b'\xA0\xA1\x00\x03\x09\x02\x00\x0B\x0D\x0A')
-
         self._log.debug("starting working loop")
 
         while self._running:
-            try:
-                line = self._ser.readline()
-            except SerialException as exc:
-                self._log.error('Device error: {}'.format(exc))
-                self._status = State.HARDWARE_ERROR
-                continue
-
-            self._log.debug(line)
+            if self._mock is None:
+                try:
+                    line = self._sio.readline()
+                except SerialException as exc:
+                    self._log.error('Device error: {}'.format(exc))
+                    self._status = State.HARDWARE_ERROR
+                    continue
+            else:
+                line = self._mock_fptr.read(66)
+                sleep(1)
 
             data = parse_skytraq_binary(line)
             if not data:
@@ -137,31 +150,35 @@ class GPSServer():
             self._log.debug(data)
 
             if data[0] == 0xA8:
-                if data[NavData.FIX_MODE.value] == 2:
+                # sync the time
+                if data[NavData.FIX_MODE.value] >= 2 and self._sync_time \
+                        and not self._time_is_sync:
                     gps_week = data[NavData.GPS_WEEK.value]
                     tow = data[NavData.TOW.value]
-                    if not self._sync_time:  # need to sync_time
-                        clock_settime(CLOCK_REALTIME, gps_time(gps_week, tow))
-                        self._sync_time = True
+                    gps_ts = gps_time(gps_week, tow)
+                    self._log.info("time was syncd to {}".format(gps_ts))
+                    clock_settime(CLOCK_REALTIME, gps_ts)
+                    self._time_is_sync = True
 
                 self._mutex.acquire()
-                if data[NavData.FIX_MODE.value] == 2:
+                self._nav_data = data
+                if data[NavData.FIX_MODE.value] >= 2:
                     self._status = State.LOCKED
                 else:
                     self._status = State.SEARCHING
-                self._nav_nav_data = data
                 self._mutex.release()
 
         self._log.debug("stoping working loop")
 
     @property
     def Sync(self):
-        """bool: sync system time on next lock"""
-        return self._sync_time
+        """bool: if the local time has been sync with gps time"""
+        return self._time_is_sync
 
     @Sync.setter
     def Sync(self):
-        self._sync_time = False
+        self._sync_time = True  # override
+        self._time_is_sync = False
 
     @property
     def Status(self):

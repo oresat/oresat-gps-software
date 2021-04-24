@@ -1,6 +1,11 @@
+oresat-gps (0.1.1-0) unstable; urgency=high
+
+  * bug fixes from real data
+
+ -- PSAS <oresat@pdx.edu>  Fri, 23 Apr 2021 22:52:15 -0700
+
 oresat-gps (0.1.0-0) unstable; urgency=low
 
   * inital package
 
  -- PSAS <oresat@pdx.edu>  Thu, 22 Apr 2021 14:48:50 -0700
-

@@ -75,6 +75,10 @@ def main():
                         help="daemonize the process")
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="enable debug log messaging")
+    parser.add_argument("-s", "--sync", action="store_true",
+                        help="sync the system time on 1st lock")
+    parser.add_argument("-m", "--mock", metavar="FILE", type=str,
+                        help="mock skytraq with file")
     args = parser.parse_args()
 
     if args.daemon:
@@ -94,14 +98,15 @@ def main():
     log = logging.getLogger('oresat-gpsd')
 
     # make gps
-    gps = GPSServer(log)
+    gps = GPSServer(log, sync_time=args.sync, mock=args.mock)
 
     # set up dbus wrapper
     bus = SystemBus()
     bus.publish(DBUS_INTERFACE_NAME, gps)
     loop = GLib.MainLoop()
 
-    power_on()
+    if args.mock == "":
+        power_on()
 
     try:
         gps.run()
@@ -115,7 +120,8 @@ def main():
         loop.quit()
         ret = 1
 
-    power_off()
+    if args.mock == "":
+        power_off()
 
     if args.daemon:
         os.remove(pid_file)  # clean up daemon
