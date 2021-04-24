@@ -59,6 +59,7 @@ def power_on():
 
 
 def power_off():
+    """ Turn the skytraq off"""
     with open("/sys/class/gpio/gpio98/value", "w") as fptr:
         fptr.write("0")
     with open("/sys/class/gpio/gpio100/value", "w") as fptr:
@@ -70,18 +71,42 @@ def parse_skytraq_binary(line) -> ():
 
     data = None
 
-    if len(line) < 7:
-        return data
-
-    #if line[:2] != b'\xA0\xA1' or line[:-2] != b'\x0D\x0A':
-    #    return data
-
-    payload_len = line[2:]
-    payload_len = payload_len[:2]
-
-    try:
-        data = struct.unpack('=4x3BHI2i2I5H6i3x', line)
-    except struct.error:
-        data = None
+    if valid_message(line):
+        try:
+            data = struct.unpack('>4x3BHI2i2I5H6i3x', line)
+        except struct.error:
+            data = None
 
     return data
+
+
+def valid_message(message) -> bool:
+    """check is the checksum is correct"""
+
+    message_len = len(message)
+    body_len = message_len - 7
+
+    if message_len <= 7:
+        return False
+
+    pl_bytes = message[2: (len(message) - 4) * -1]
+
+    try:
+        pl = struct.unpack('>H', pl_bytes)
+    except struct.error as exc:
+        print('Parse error: {}\n'.format(exc))
+        return False
+
+    if body_len != pl[0]:
+        print('payload len error: {} {}'.format(body_len, pl[0]))
+        return False
+
+    cs = 0
+    for i in message[4:-3]:
+        cs = cs ^ i
+
+    if cs != message[-3]:
+        print("invalid cs")
+        return False
+
+    return True
