@@ -68,7 +68,7 @@ def main():
     """The main for the oresat linux gps daemon"""
 
     ret = 0
-    pid_file = "/run/oresat-linux-gpsd.pid"
+    pid_file = "/run/oresat-gpsd.pid"
 
     parser = ArgumentParser()
     parser.add_argument("-d", "--daemon", action="store_true",
@@ -78,7 +78,7 @@ def main():
     parser.add_argument("-s", "--sync", action="store_true",
                         help="sync the system time on 1st lock")
     parser.add_argument("-m", "--mock", metavar="FILE", type=str,
-                        help="mock skytraq with file")
+                        default="", help="mock skytraq with file")
     args = parser.parse_args()
 
     if args.daemon:
@@ -97,6 +97,9 @@ def main():
 
     log = logging.getLogger('oresat-gpsd')
 
+    if args.mock == "":
+        power_on()
+
     # make gps
     gps = GPSServer(log, sync_time=args.sync, mock=args.mock)
 
@@ -104,9 +107,6 @@ def main():
     bus = SystemBus()
     bus.publish(DBUS_INTERFACE_NAME, gps)
     loop = GLib.MainLoop()
-
-    if args.mock == "":
-        power_on()
 
     try:
         gps.run()

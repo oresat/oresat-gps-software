@@ -7,5 +7,5 @@ Homepage: https://github.com/oresat/oresat-gps-software
 
 Package: oresat-gps
 Architecture: all
-Depends: libsystemd-dev, python3, python3-pydbus, python3-serial
+Depends: libsystemd-dev, python3, python3-pydbus, python3-serial, python3-setuptools
 Description: A quick gps daemon with a D-Bus interface.
