@@ -145,7 +145,7 @@ class GPSServer():
         self._log.debug("starting working loop")
 
         while self._running:
-            if self._mock is None:
+            if self._mock == "":
                 try:
                     line = _readline(self._ser)
                 except SerialException as exc:

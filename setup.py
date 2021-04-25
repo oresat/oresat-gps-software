@@ -7,7 +7,7 @@ with open("README.md", "r") as f:
 
 setup(
     name="oresat-gps",
-    version="1.0.0",
+    version="0.1.1",
     author="PSAS",
     author_email="oresat@pdx.edu",
     license="GPL-3.0",
