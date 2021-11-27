@@ -144,3 +144,5 @@ cython_debug/
 *.substvars
 debian/oresat_gps/
 debian/files
+bb.org-overlays/
+*.dtbo

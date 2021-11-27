@@ -1,0 +1,84 @@
+/* OreSat GPS overlay */
+
+#include <dt-bindings/pinctrl/am33xx.h>
+
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "ti,beaglebone", "ti,beaglebone-black", "ti,beaglebone-green";
+
+    // identification
+    part-number = "BEAGLELOGIC";
+    version = "00A0";
+
+    fragment@0 {
+        target-path="/";
+        __overlay__ {
+            chosen {
+                overlays {
+                    gps-00A0 = __TIMESTAMP__;
+	        };
+            };
+        };
+    };
+
+    // overlay to enable gps GPIO
+    fragment@1 {
+        target = <&ocp>;
+        __overlay__ {
+            cape-universal {
+                compatible = "gpio-of-helper";
+                status = "okay";
+                pinctrl-names = "default";
+                pinctrl-0 = <&gps_pins>; /* this must point to pinmux name below */
+
+                trigger {
+                    gpio-name = "trigger";
+                    gpio = <&gpio3 2 0>; /* mii1_rx_er */
+                    input;
+                    dir-changeable;
+                };
+
+                lna {
+                    gpio-name = "lna";
+                    gpio = <&gpio3 4 0>; /* mii1_rx_dv */
+                    input;
+                    dir-changeable;
+                };
+            };
+        };
+    };
+
+    // overlay to enable gps GPIO pinmux.
+    fragment@2 {
+        target = <&am33xx_pinmux>;
+        __overlay__ {
+            gps_pins: gps_pins { pinctrl-single,pins = <
+                AM33XX_IOPAD(AM335X_PIN_MII1_RX_ER, PIN_OUTPUT | INPUT_EN | MUX_MODE7)  /* mii1_rx_er == trigger */
+                AM33XX_IOPAD(AM335X_PIN_MII1_RX_DV, PIN_OUTPUT | INPUT_EN | MUX_MODE7)  /* mii1_rx_er == lna */
+            >; };
+        };
+    };
+
+	// overlay to enable UART2 pinmux on alternate pins
+    fragment@3 {
+        target = <&am33xx_pinmux>;
+        __overlay__ {
+            uart2_alt_pins: uart2_alt_pins { pinctrl-single,pins = <
+                AM33XX_IOPAD(AM335X_PIN_MII1_RX_CLK, PIN_OUTPUT_PULLDOWN | MUX_MODE1)   /* mii1_rx_clk == uart2_tx */
+                AM33XX_IOPAD(AM335X_PIN_MII1_TX_CLK, PIN_INPUT_PULLUP | MUX_MODE1)	/* mii1_tx_clk == uart2_trx */
+            >; };
+        };
+    };
+
+	// overlay to apply alternate UART2 pins to uart2 module
+	fragment@4 {
+		target = <&uart2>;
+		__overlay__ {
+			status = "okay";
+			pinctrl-names = "default";
+			pinctrl-0 = <&uart2_alt_pins>;
+		};
+	};
+};
