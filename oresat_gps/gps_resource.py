@@ -40,7 +40,7 @@ class GPSResource(Resource):
         self._obj_skytraq_data = node.object_dictionary[INDEX_SKYTRAQ_DATA]
 
         if mock is True:  # use arg value
-            self._mock = mock
+            self._mock = True
             self._obj_skytraq_control[SUBINDEX_MOCK].value = mock
         else:  # use value from OD
             self._mock = self._obj_skytraq_control[SUBINDEX_MOCK].value
@@ -102,8 +102,8 @@ class GPSResource(Resource):
             self._obj_skytraq_control[SUBINDEX_IS_SYNCD] = True
 
         # add skytraq data to OD
-        for i in range(data):
-            self.obj_skytraq_data[i + 1].value = data[i]
+        for i in range(1, len(data)):
+            self.obj_skytraq_data[i].value = data[i]
 
         if data[NavData.NUMBER_OF_SV.value] >= 4 and \
                 data[NavData[NavData.FIX_MODE].value] == 2:
