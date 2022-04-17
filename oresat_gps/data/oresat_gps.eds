@@ -3238,7 +3238,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0006
 AccessType=rw
-DefaultValue=0
+DefaultValue=1000
 PDOMapping=0
 
 [1806sub6]
@@ -4057,7 +4057,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0005
 AccessType=rw
-DefaultValue=0x00
+DefaultValue=0x01
 PDOMapping=0
 
 [1A02sub1]
@@ -4066,7 +4066,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0007
 AccessType=rw
-DefaultValue=0x00000000
+DefaultValue=0x60011440
 PDOMapping=0
 
 [1A02sub2]
@@ -4144,7 +4144,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0005
 AccessType=rw
-DefaultValue=0x00
+DefaultValue=0x02
 PDOMapping=0
 
 [1A03sub1]
@@ -4153,7 +4153,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0007
 AccessType=rw
-DefaultValue=0x00000000
+DefaultValue=0x60010E20
 PDOMapping=0
 
 [1A03sub2]
@@ -4162,7 +4162,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0007
 AccessType=rw
-DefaultValue=0x00000000
+DefaultValue=0x60010F20
 PDOMapping=0
 
 [1A03sub3]
@@ -4231,7 +4231,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0005
 AccessType=rw
-DefaultValue=0x00
+DefaultValue=0x02
 PDOMapping=0
 
 [1A04sub1]
@@ -4240,7 +4240,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0007
 AccessType=rw
-DefaultValue=0x00000000
+DefaultValue=0x60011020
 PDOMapping=0
 
 [1A04sub2]
@@ -4249,7 +4249,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0007
 AccessType=rw
-DefaultValue=0x00000000
+DefaultValue=0x60011120
 PDOMapping=0
 
 [1A04sub3]
@@ -4318,7 +4318,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0005
 AccessType=rw
-DefaultValue=0x00
+DefaultValue=0x02
 PDOMapping=0
 
 [1A05sub1]
@@ -4327,7 +4327,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0007
 AccessType=rw
-DefaultValue=0x00000000
+DefaultValue=0x60011220
 PDOMapping=0
 
 [1A05sub2]
@@ -4336,7 +4336,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0007
 AccessType=rw
-DefaultValue=0x00000000
+DefaultValue=0x60011320
 PDOMapping=0
 
 [1A05sub3]
@@ -4405,7 +4405,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0005
 AccessType=rw
-DefaultValue=0x00
+DefaultValue=0x02
 PDOMapping=0
 
 [1A06sub1]
@@ -4414,7 +4414,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0007
 AccessType=rw
-DefaultValue=0x00000008
+DefaultValue=0x60000508
 PDOMapping=0
 
 [1A06sub2]
@@ -4423,7 +4423,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0007
 AccessType=rw
-DefaultValue=0x0000000
+DefaultValue=0x60010208
 PDOMapping=0
 
 [1A06sub3]
@@ -5367,7 +5367,7 @@ PDOMapping=0
 ParameterName=SkyTraq Data
 ObjectType=0x9
 StorageLocation=RAM
-SubNumber=0x14
+SubNumber=0x15
 
 [6001sub0]
 ParameterName=Highest sub-index supported
@@ -5569,6 +5569,17 @@ DataType=0x0004
 AccessType=ro
 DefaultValue=0
 PDOMapping=1
+
+;SCET datetime
+[6001sub14]
+ParameterName=SCET datetime
+ObjectType=0x7
+StorageLocation=RAM
+DataType=0x001B
+AccessType=ro
+DefaultValue=0
+PDOMapping=1
+
 
 [ManufacturerObjects]
 SupportedObjects=12
