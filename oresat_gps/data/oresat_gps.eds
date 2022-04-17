@@ -5340,7 +5340,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0005
 AccessType=rw
-DefaultValue=0
+DefaultValue=0x01
 PDOMapping=0
 
 ;sync system time the time to skytraq message
@@ -5350,7 +5350,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0001
 AccessType=rw
-DefaultValue=1
+DefaultValue=0
 PDOMapping=0
 
 ;has the system time been sync'd to the time in the skytraq message

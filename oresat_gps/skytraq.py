@@ -146,12 +146,12 @@ class SkyTrack:
             raise SkyTrackError('skytraq is not on')
 
         if self._mock:
+            line = self.MOCK_DATA
+        else:
             try:
                 line = _readline(self._ser)
             except SerialException as exc:
                 raise SkyTrackError(f'Device error: {exc}')
-        else:
-            line = self.MOCK_DATA
 
         line_len = len(line)
         if line_len <= 7:
@@ -161,7 +161,7 @@ class SkyTrack:
         body_len = line_len - 7
         pl_bytes = line[2: (line_len - 4) * -1]
         try:
-            pl = struct.unpack('>H', pl_bytes[0])
+            pl = struct.unpack('>H', pl_bytes)[0]
         except struct.error:
             raise SkyTrackError('skytraq payload length unpack failed')
         if body_len != pl:

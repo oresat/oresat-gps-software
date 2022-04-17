@@ -80,36 +80,42 @@ class GPSResource(Resource):
     def on_start(self):
 
         if self._obj_skytraq_control[SUBINDEX_STATUS].value:
-            self._delay = 0
+            if not self._mock:
+                self._delay = 1
             self._skytraq.power_on()
             self._state = States.SEARCHING
 
     def on_loop(self):
-
         if self._state == States.OFF:
             return
 
         try:
-            data = self.skytraq.read()
+            data = self._skytraq.read()
         except SkyTrackError as exc:
             self._state = States.FAILED
             logger.error(exc)
 
+        # datetime from gps message
+        dt = gps_datetime(data[NavData.GPS_WEEK.value], data[NavData.TOW.value])
+
         if self._obj_skytraq_control[SUBINDEX_SYNC_ENABLE].value and \
                 not self._obj_skytraq_control[SUBINDEX_IS_SYNCD].value:
-            dt = gps_datetime(data[NavData.GPS_WEEK.value], data[NavData.TOW.value])
-            clock_settime(CLOCK_REALTIME, dt.timestampe())
+            clock_settime(CLOCK_REALTIME, dt)
             self._obj_skytraq_control[SUBINDEX_IS_SYNCD] = True
 
         # add skytraq data to OD
         for i in range(1, len(data)):
-            self.obj_skytraq_data[i].value = data[i]
+            self._obj_skytraq_data[i].value = data[i]
+        self._obj_skytraq_data[0x14].value = int(dt)
 
+        # update status
         if data[NavData.NUMBER_OF_SV.value] >= 4 and \
-                data[NavData[NavData.FIX_MODE].value] == 2:
+                data[NavData.FIX_MODE.value] == 2:
             self._state = States.LOCKED
 
     def on_end(self):
 
         # make sure the skytraq is off
         self._skytraq.power_off()
+        self._state = States.OFF
+        self._delay = 1
