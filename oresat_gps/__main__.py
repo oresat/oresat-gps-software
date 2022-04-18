@@ -5,8 +5,8 @@ from olaf import app_args_parser, parse_app_args, App
 
 from .gps_resource import GPSResource
 
-if __name__ == '__main__':
 
+def main():
     parser = ArgumentParser(parents=[app_args_parser])
     parser.add_argument('-m', '--mock-hw', action='store_true', help='mock hardware')
     args = parser.parse_args()
@@ -17,3 +17,7 @@ if __name__ == '__main__':
     app.add_resource(GPSResource(app.node, args.mock_hw))
 
     app.run()
+
+
+if __name__ == '__main__':
+    main()
