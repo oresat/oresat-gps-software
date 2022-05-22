@@ -4,7 +4,7 @@ from time import clock_settime, CLOCK_REALTIME, sleep
 
 import canopen
 from loguru import logger
-from olaf.common.resource import Resource
+from olaf import Resource, scet_int_from_time
 
 from .skytraq import SkyTrack, NavData, SkyTrackError
 from .gps_datetime import gps_datetime
@@ -118,7 +118,7 @@ class GPSResource(Resource):
             # add all skytraq data to OD
             for i in range(1, len(data)):
                 self.skytraq_data_rec[i].value = data[i]
-            self.skytraq_data_rec[0x14].value = int(dt)
+            self.skytraq_data_rec[0x14].value = scet_int_from_time(int(dt))
 
             # send gps tpdos
             self.send_tpdo(2)
