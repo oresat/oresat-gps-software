@@ -36,24 +36,27 @@ class GPSResource(Resource):
 
         super().__init__(node, 'GPS', 1)
 
-        self._obj_skytraq_control = node.object_dictionary[INDEX_SKYTRAQ_CONTROL]
-        self._obj_skytraq_data = node.object_dictionary[INDEX_SKYTRAQ_DATA]
+        self.skytraq_control_rec = node.object_dictionary[INDEX_SKYTRAQ_CONTROL]
+        self.skytraq_data_rec = node.object_dictionary[INDEX_SKYTRAQ_DATA]
 
         if mock is True:  # use arg value
             self._mock = True
-            self._obj_skytraq_control[SUBINDEX_MOCK].value = mock
+            self.skytraq_control_rec[SUBINDEX_MOCK].value = mock
         else:  # use value from OD
-            self._mock = self._obj_skytraq_control[SUBINDEX_MOCK].value
+            self._mock = self.skytraq_control_rec[SUBINDEX_MOCK].value
+
+        if self._mock:
+            logger.info('mocking SkyTrack')
 
         # get skytraq setting from OD
-        serial_bus = self._obj_skytraq_control[SUBINDEX_SERIAL_BUS].value
-        gpio0 = self._obj_skytraq_control[SUBINDEX_GPIO0].value
-        gpio1 = self._obj_skytraq_control[SUBINDEX_GPIO1].value
+        serial_bus = self.skytraq_control_rec[SUBINDEX_SERIAL_BUS].value
+        gpio0 = self.skytraq_control_rec[SUBINDEX_GPIO0].value
+        gpio1 = self.skytraq_control_rec[SUBINDEX_GPIO1].value
 
         self._skytraq = SkyTrack(serial_bus, gpio0, gpio1, self._mock)
 
         # make sure the flag for the time has been syncd is set to false
-        self._obj_skytraq_control[SUBINDEX_IS_SYNCD].value = False
+        self.skytraq_control_rec[SUBINDEX_IS_SYNCD].value = False
 
         self._state = States.OFF
 
@@ -74,12 +77,12 @@ class GPSResource(Resource):
                     self._state = States.OFF
                     self._delay = 1
             elif subindex == SUBINDEX_SYNC_ENABLE and data:  # sync time on next message
-                self._obj_skytraq_control[SUBINDEX_SYNC_ENABLE].value = True
-                self._obj_skytraq_control[SUBINDEX_IS_SYNCD].value = False
+                self.skytraq_control_rec[SUBINDEX_SYNC_ENABLE].value = True
+                self.skytraq_control_rec[SUBINDEX_IS_SYNCD].value = False
 
     def on_start(self):
 
-        if self._obj_skytraq_control[SUBINDEX_STATUS].value:
+        if self.skytraq_control_rec[SUBINDEX_STATUS].value:
             if not self._mock:
                 self._delay = 1
             self._skytraq.power_on()
@@ -92,26 +95,31 @@ class GPSResource(Resource):
         try:
             data = self._skytraq.read()
         except SkyTrackError as exc:
-            self._state = States.FAILED
             logger.error(exc)
+            return
 
-        # datetime from gps message
-        dt = gps_datetime(data[NavData.GPS_WEEK.value], data[NavData.TOW.value])
+        if data[1] == 0:  # no fix
+            self.skytraq_data_rec[1].value = 0
+        else:  # fix
+            # datetime from gps message
+            dt = gps_datetime(data[NavData.GPS_WEEK.value], data[NavData.TOW.value])
 
-        if self._obj_skytraq_control[SUBINDEX_SYNC_ENABLE].value and \
-                not self._obj_skytraq_control[SUBINDEX_IS_SYNCD].value:
-            clock_settime(CLOCK_REALTIME, dt)
-            self._obj_skytraq_control[SUBINDEX_IS_SYNCD] = True
+            # sync clock if it hasn't been syncd yet
+            if self.skytraq_control_rec[SUBINDEX_SYNC_ENABLE].value and \
+                    not self.skytraq_control_rec[SUBINDEX_IS_SYNCD].value:
+                clock_settime(CLOCK_REALTIME, dt)
+                self.skytraq_control_rec[SUBINDEX_IS_SYNCD] = True
 
-        # add skytraq data to OD
-        for i in range(1, len(data)):
-            self._obj_skytraq_data[i].value = data[i]
-        self._obj_skytraq_data[0x14].value = int(dt)
+            # add all skytraq data to OD
+            for i in range(1, len(data)):
+                self.skytraq_data_rec[i].value = data[i]
+            self.skytraq_data_rec[0x14].value = int(dt)
 
         # update status
-        if data[NavData.NUMBER_OF_SV.value] >= 4 and \
-                data[NavData.FIX_MODE.value] == 2:
+        if data[NavData.NUMBER_OF_SV.value] >= 4 and data[NavData.FIX_MODE.value] == 2:
             self._state = States.LOCKED
+        else:
+            self._state = States.SEARCHING
 
     def on_end(self):
 

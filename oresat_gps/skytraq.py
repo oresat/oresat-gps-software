@@ -33,24 +33,6 @@ class NavData(IntEnum):
     ECEF_VZ = 19
 
 
-def _readline(ser) -> bytes:
-    '''readline from serial, where line ends with "\r\n"'''
-    eol = b'\r\n'
-    leneol = len(eol)
-    line = bytearray()
-
-    while True:
-        c = ser.read(1)
-        if c:
-            line += c
-            if line[-leneol:] == eol:
-                break
-        else:
-            break
-
-    return bytes(line)
-
-
 class SkyTrack:
 
     BINARY_MODE = b'\xA0\xA1\x00\x03\x09\x02\x00\x0B\x0D\x0A'
@@ -62,14 +44,12 @@ class SkyTrack:
                  b'\x00\x00\x00\x00\x00\x00\x68\x0d\x0a')
     '''Mock binary line'''
 
-    def __init__(self, port: str, baud: str, gpio0: str, gpio1: str, mock: bool = True):
+    def __init__(self, port: str, gpio0: str, gpio1: str, mock: bool = True):
         '''
         Paramters
         ---------
         port: str
             Serial port to use.
-        baud: str
-            Baud to use.
         gpio0: str
             gpio to use.
         gpio1: str
@@ -79,7 +59,7 @@ class SkyTrack:
         '''
 
         self._port = port
-        self._baud = baud
+        self._baud = 9600
         self._gpio0 = gpio0
         self._gpio1 = gpio1
         self._mock = mock
@@ -139,43 +119,83 @@ class SkyTrack:
     def is_on(self) -> bool:
         return self._is_on
 
+    def _readline(self, timeout) -> bytes:
+        '''readline from skytraq serial bus
+
+        format:
+            [0xA0A1][PL][ID][P][CS][\r\n]
+            PL = payload length
+            ID = unique id
+            P = payload
+            CS = checksum
+
+        Raises
+        ------
+        SkyTrackError
+            An error occured.
+
+        Returns
+        -------
+        bytes
+            The bytes from the body. The first byte is the message the rest are the payload bytes.
+        '''
+
+        if self._mock:
+            line = self.MOCK_DATA
+        else:
+            line = bytearray()
+            while True:
+                try:
+                    c = self._ser.read(timeout)
+                except SerialException as exc:
+                    raise SkyTrackError(f'Serial device error: {exc}')
+
+                if c:
+                    line += c
+                    if line[-2:] == b'\r\n':
+                        break
+                else:
+                    break
+            line = bytes(line)
+
+        if not line:
+            raise SkyTrackError('skytraq read serial failed')
+
+        line_len = len(line)
+        if line_len <= 7:
+            raise SkyTrackError('skytraq message length is too short')
+
+        payload_len_bytes = line[2: (line_len - 4) * -1]
+        payload_bytes = line[4:-3]
+        checksum_byte = line[-3]
+
+        # validate payload length in line
+        try:
+            pl = struct.unpack('>H', payload_len_bytes)[0]
+        except struct.error:
+            raise SkyTrackError('skytraq payload length unpack failed')
+        if len(payload_bytes) != pl:
+            raise SkyTrackError(f'payload length does not match {len(payload_bytes)} vs {pl}')
+
+        # validate checksum
+        cs = 0
+        for i in payload_bytes:
+            cs = cs ^ i
+        if cs != checksum_byte:
+            raise SkyTrackError('invalid checksum')
+
+        return payload_bytes
+
     def read(self) -> ():
         '''Read a message from the skytraq.'''
 
         if not self._is_on:
             raise SkyTrackError('skytraq is not on')
 
-        if self._mock:
-            line = self.MOCK_DATA
-        else:
-            try:
-                line = _readline(self._ser)
-            except SerialException as exc:
-                raise SkyTrackError(f'Device error: {exc}')
-
-        line_len = len(line)
-        if line_len <= 7:
-            raise SkyTrackError('skytraq message length is <= 7')
-
-        # validate payload length in line
-        body_len = line_len - 7
-        pl_bytes = line[2: (line_len - 4) * -1]
-        try:
-            pl = struct.unpack('>H', pl_bytes)[0]
-        except struct.error:
-            raise SkyTrackError('skytraq payload length unpack failed')
-        if body_len != pl:
-            raise SkyTrackError(f'payload length does not match {body_len} vs {pl}')
-
-        # validate checksum
-        cs = 0
-        for i in line[4:-3]:
-            cs = cs ^ i
-        if cs != line[-3]:
-            raise SkyTrackError('invalid checksum')
+        payload = self._readline(1)
 
         try:
-            data = struct.unpack('>4x3BHI2i2I5H6i3x', line)
+            data = struct.unpack('>3BHI2i2I5H6i', payload)
         except struct.error:
             raise SkyTrackError('skytraq message unpack failed')
 
