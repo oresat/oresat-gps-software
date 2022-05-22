@@ -12,7 +12,7 @@ def main():
     args = parser.parse_args()
     parse_app_args(args)
 
-    app = App(f'{dirname(abspath(__file__))}/data/oresat_gps.eds', args.bus, args.node_id)
+    app = App(f'{dirname(abspath(__file__))}/data/oresat_gps.dcf', args.bus, args.node_id)
 
     app.add_resource(GPSResource(app.node, args.mock_hw))
 
