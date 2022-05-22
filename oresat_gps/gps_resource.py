@@ -46,7 +46,7 @@ class GPSResource(Resource):
             self._mock = self.skytraq_control_rec[SUBINDEX_MOCK].value
 
         if self._mock:
-            logger.info('mocking SkyTrack')
+            logger.warning('mocking SkyTrack')
 
         # get skytraq setting from OD
         serial_bus = self.skytraq_control_rec[SUBINDEX_SERIAL_BUS].value
@@ -69,10 +69,12 @@ class GPSResource(Resource):
         if index != INDEX_SKYTRAQ_CONTROL:
             if subindex == SUBINDEX_STATUS:  # turn skytraq on/off
                 if data is True:
+                    logger.info('turning SkyTrack on')
                     self._skytraq.power_on()
                     self._state = States.SEARCHING
                     self._delay = 0
                 else:
+                    logger.info('turning SkyTrack off')
                     self._skytraq.power_off()
                     self._state = States.OFF
                     self._delay = 1
@@ -108,6 +110,7 @@ class GPSResource(Resource):
             if self.skytraq_control_rec[SUBINDEX_SYNC_ENABLE].value and \
                     not self.skytraq_control_rec[SUBINDEX_IS_SYNCD].value:
                 clock_settime(CLOCK_REALTIME, dt)
+                logger.info('set time based off of skytraq time')
                 self.skytraq_control_rec[SUBINDEX_IS_SYNCD] = True
 
             # add all skytraq data to OD
