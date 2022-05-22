@@ -14,7 +14,7 @@ def main():
 
     app = App(f'{dirname(abspath(__file__))}/data/oresat_gps.dcf', args.bus, args.node_id)
 
-    app.add_resource(GPSResource(app.node, args.mock_hw))
+    app.add_resource(GPSResource(app.node, args.mock_hw, app.send_tpdo))
 
     app.run()
 

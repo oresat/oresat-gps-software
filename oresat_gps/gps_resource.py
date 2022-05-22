@@ -32,9 +32,11 @@ class States(IntEnum):
 
 class GPSResource(Resource):
 
-    def __init__(self, node: canopen.LocalNode, mock=False):
+    def __init__(self, node: canopen.LocalNode, mock: bool, send_tpdo):
 
         super().__init__(node, 'GPS', 1)
+
+        self.send_tpdo = send_tpdo
 
         self.skytraq_control_rec = node.object_dictionary[INDEX_SKYTRAQ_CONTROL]
         self.skytraq_data_rec = node.object_dictionary[INDEX_SKYTRAQ_DATA]
@@ -117,6 +119,12 @@ class GPSResource(Resource):
             for i in range(1, len(data)):
                 self.skytraq_data_rec[i].value = data[i]
             self.skytraq_data_rec[0x14].value = int(dt)
+
+            # send gps tpdos
+            self.send_tpdo(2)
+            self.send_tpdo(3)
+            self.send_tpdo(4)
+            self.send_tpdo(5)
 
         # update status
         if data[NavData.NUMBER_OF_SV.value] >= 4 and data[NavData.FIX_MODE.value] == 2:

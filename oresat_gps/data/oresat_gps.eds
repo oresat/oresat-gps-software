@@ -2935,7 +2935,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0005
 AccessType=rw
-DefaultValue=254
+DefaultValue=255
 PDOMapping=0
 
 [1802sub3]
@@ -2962,7 +2962,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0006
 AccessType=rw
-DefaultValue=1000
+DefaultValue=0
 PDOMapping=0
 
 [1802sub6]
@@ -3004,7 +3004,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0005
 AccessType=rw
-DefaultValue=254
+DefaultValue=255
 PDOMapping=0
 
 [1803sub3]
@@ -3031,7 +3031,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0006
 AccessType=rw
-DefaultValue=1000
+DefaultValue=0
 PDOMapping=0
 
 [1803sub6]
@@ -3073,7 +3073,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0005
 AccessType=rw
-DefaultValue=254
+DefaultValue=255
 PDOMapping=0
 
 [1804sub3]
@@ -3100,7 +3100,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0006
 AccessType=rw
-DefaultValue=1000
+DefaultValue=0
 PDOMapping=0
 
 [1804sub6]
@@ -3142,7 +3142,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0005
 AccessType=rw
-DefaultValue=254
+DefaultValue=255
 PDOMapping=0
 
 [1805sub3]
@@ -3169,7 +3169,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0006
 AccessType=rw
-DefaultValue=1000
+DefaultValue=0
 PDOMapping=0
 
 [1805sub6]
@@ -3211,7 +3211,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0005
 AccessType=rw
-DefaultValue=254
+DefaultValue=255
 PDOMapping=0
 
 [1806sub3]
@@ -3280,7 +3280,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0005
 AccessType=rw
-DefaultValue=254
+DefaultValue=255
 PDOMapping=0
 
 [1807sub3]
@@ -3349,7 +3349,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0005
 AccessType=rw
-DefaultValue=254
+DefaultValue=255
 PDOMapping=0
 
 [1808sub3]
@@ -3418,7 +3418,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0005
 AccessType=rw
-DefaultValue=254
+DefaultValue=255
 PDOMapping=0
 
 [1809sub3]
@@ -3487,7 +3487,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0005
 AccessType=rw
-DefaultValue=254
+DefaultValue=255
 PDOMapping=0
 
 [180Asub3]
@@ -3556,7 +3556,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0005
 AccessType=rw
-DefaultValue=254
+DefaultValue=255
 PDOMapping=0
 
 [180Bsub3]
@@ -3625,7 +3625,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0005
 AccessType=rw
-DefaultValue=254
+DefaultValue=255
 PDOMapping=0
 
 [180Csub3]
@@ -3694,7 +3694,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0005
 AccessType=rw
-DefaultValue=254
+DefaultValue=255
 PDOMapping=0
 
 [180Dsub3]
@@ -3763,7 +3763,7 @@ ObjectType=0x7
 StorageLocation=RAM
 DataType=0x0005
 AccessType=rw
-DefaultValue=254
+DefaultValue=255
 PDOMapping=0
 
 [180Esub3]
