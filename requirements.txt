@@ -1,2 +1,3 @@
 oresat-olaf
 pyserial
+flake8

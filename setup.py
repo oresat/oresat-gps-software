@@ -5,9 +5,6 @@ from oresat_gps import __version__
 with open('README.md', 'r') as f:
     long_description = f.read()
 
-with open('requirements.txt', 'r') as f:
-    dependencies = f.read()
-
 setup(
     name='oresat-gps',
     version=__version__,
@@ -20,7 +17,11 @@ setup(
     maintainer_email='oresat@pdx.edu',
     url='https://github.com/oresat/oresat-gps-software',
     packages=['oresat_gps'],
-    install_requires=dependencies,
+    keywords=['oresat', 'gps'],
+    install_requires=[
+        'oresat-olaf',
+        'pyserial',
+    ],
     entry_points={
         'console_scripts': [
             'oresat-gps = oresat_gps.__main__:main',
