@@ -33,6 +33,15 @@ class NavData(IntEnum):
     ECEF_VZ = 19
 
 
+class FixMode(IntEnum):
+    '''Quality of fix'''
+
+    NO_FIX = 0
+    FIX_2D = 1
+    FIX_3D = 2
+    FIX_3D_DGPS = 3
+
+
 class SkyTrack:
 
     BINARY_MODE = b'\xA0\xA1\x00\x03\x09\x02\x00\x0B\x0D\x0A'
