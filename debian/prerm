@@ -1,7 +1,0 @@
-#!/bin/sh
-
-SERVICE_FILE=oresat-gpsd.service
-
-systemctl stop $SERVICE_FILE
-
-exit 0

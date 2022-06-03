@@ -1,0 +1,3 @@
+oresat-olaf>=0.3.0
+pyserial
+flake8
