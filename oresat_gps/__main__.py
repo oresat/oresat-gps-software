@@ -8,13 +8,13 @@ from .gps_resource import GPSResource
 
 def main():
     parser = ArgumentParser(parents=[app_args_parser])
-    parser.add_argument('-m', '--mock-hw', action='store_true', help='mock hardware')
     args = parser.parse_args()
     parse_app_args(args)
 
-    app = App(f'{dirname(abspath(__file__))}/data/oresat_gps.dcf', args.bus, args.node_id)
+    eds = f'{dirname(abspath(__file__))}/data/oresat_gps.dcf'
+    app = App(eds, args.bus, args.node_id, args.mock_hw)
 
-    app.add_resource(GPSResource(app.node, args.mock_hw, app.send_tpdo))
+    app.add_resource(GPSResource)
 
     app.run()
 

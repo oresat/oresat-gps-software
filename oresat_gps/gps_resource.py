@@ -31,14 +31,11 @@ class GPSResource(Resource):
     INDEX_SKYTRAQ_CONTROL = 0x6000
     INDEX_SKYTRAQ_DATA = 0x6001
 
-    def __init__(self, node: canopen.LocalNode, mock: bool, send_tpdo):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-        super().__init__(node, 'GPS', 1)
-
-        self.send_tpdo = send_tpdo
-
-        self.control_rec = node.object_dictionary[self.INDEX_SKYTRAQ_CONTROL]
-        self.data_rec = node.object_dictionary[self.INDEX_SKYTRAQ_DATA]
+        self.control_rec = self.od[self.INDEX_SKYTRAQ_CONTROL]
+        self.data_rec = self.od[self.INDEX_SKYTRAQ_DATA]
 
         # control subindexes
         self.mock_obj = self.control_rec[ControlSubindex.MOCK.value]
@@ -46,21 +43,23 @@ class GPSResource(Resource):
         self.is_syncd_obj = self.control_rec[ControlSubindex.IS_SYNCD.value]
         self.is_syncd_obj = self.control_rec[ControlSubindex.STATUS.value]
 
-        if mock is True:  # use arg value
-            self._mock = True
-            self.mock_obj.value = mock
+        if self.mock_hw:  # use arg value
+            self.mock_obj.value = self.mock_hw
         else:  # use value from OD
-            self._mock = self.mock_obj.value
+            self._mock_hw = self.mock_obj.value
 
-        if self._mock:
+        if self.mock_hw:
             logger.warning('mocking SkyTrack')
+            self.delay = 1
+        else:
+            self.delay = 0
 
         # get skytraq setting from OD
         serial_bus = self.control_rec[ControlSubindex.SERIAL_BUS.value].value
         gpio0 = self.control_rec[ControlSubindex.GPIO0.value].value
         gpio1 = self.control_rec[ControlSubindex.GPIO1.value].value
 
-        self._skytraq = SkyTrack(serial_bus, gpio0, gpio1, self._mock)
+        self._skytraq = SkyTrack(serial_bus, gpio0, gpio1, self.mock_hw)
 
         # make sure the flag for the time has been syncd is set to false
         self.is_syncd_obj.value = False
@@ -75,24 +74,26 @@ class GPSResource(Resource):
 
         if index == self.INDEX_SKYTRAQ_CONTROL:
             if subindex == ControlSubindex.STATUS:  # turn skytraq on/off
-                if data is True:
+                if od.decode_raw(data):
                     logger.info('turning SkyTrack on')
                     self._skytraq.power_on()
                     self._state = States.SEARCHING
-                    self._delay = 0
+                    if not self.mock_hw:
+                        self.delay = 0  # serial bus will loop rate
                 else:
                     logger.info('turning SkyTrack off')
                     self._skytraq.power_off()
                     self._state = States.OFF
-                    self._delay = 1
+                    self.data_rec[NavData.NUMBER_OF_SV.value].value = 0  # zero this for TPDO
+                    self.delay = 1
             elif subindex == ControlSubindex.SYNC_ENABLE:  # sync time on next message
                 self.sync_enable_obj.value = True
                 self.is_syncd_obj.value = False
 
     def on_start(self):
 
-        if not self._mock:
-            self._delay = 1
+        if not self.mock_hw:
+            self.delay = 1
         self._skytraq.power_on()
         self._state = States.SEARCHING
 
@@ -141,4 +142,4 @@ class GPSResource(Resource):
         # make sure the skytraq is off
         self._skytraq.power_off()
         self._state = States.OFF
-        self._delay = 1
+        self.delay = 1
