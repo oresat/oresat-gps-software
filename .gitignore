@@ -146,3 +146,6 @@ debian/oresat_gps/
 debian/files
 bb.org-overlays/
 *.dtbo
+
+# temp eds
+*.tmp

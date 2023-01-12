@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <style>
+    table {
+      font-family: arial, sans-serif;
+      border-collapse: collapse;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    td, th {
+      border: 1px solid #dddddd;
+      text-align: left;
+      padding: 8px;
+    }
+    #grid {
+      display: grid;
+      grid-template-columns: auto auto;
+    }
+  </style>
+  <div id='grid'>
+    <div>
+      <h4>SkyTraq Control</h4>
+      <table>
+        <tr>
+          <td>Serial Bus</td>
+          <td><span id='serialBus'></span></td>
+        </tr>
+        <tr>
+          <td>GPIO 0</td>
+          <td><span id='gpio0'></span></td>
+        </tr>
+        <tr>
+          <td>GPIO 1</td>
+          <td><span id='gpio1'></span></td>
+        </tr>
+        <tr>
+          <td>Mock</td>
+          <td><span id='mock'></span></td>
+        </tr>
+        <tr>
+          <td>Status</td>
+          <td><span id='status'></span></td>
+        </tr>
+        <tr>
+          <td>Time Syncd</td>
+          <td><span id='timeSyncd'></span></td>
+        </tr>
+      </table>
+    </div>
+    <div>
+      <h4>SkyTraq Data</h4>
+      <table>
+        <tr>
+          <td>Fix Mode</td>
+          <td><span id='fixMode'></span></td>
+        </tr>
+        <tr>
+          <td>Number of SVs</td>
+          <td><span id='numSv'></span></td>
+        </tr>
+        <tr>
+          <td>GPS Week</td>
+          <td><span id='gpsWeek'></span></td>
+        </tr>
+        <tr>
+          <td>TOW</td>
+          <td><span id='tow'></span></td>
+        </tr>
+        <tr>
+          <td>Latitude</td>
+          <td><span id='lat'></span> degrees</td>
+        </tr>
+        <tr>
+          <td>Longitude</td>
+          <td><span id='long'></span> degrees</td>
+        </tr>
+        <tr>
+          <td>Ellipsoid Altitude</td>
+          <td><span id='ellipAlt'></span> m</td>
+        </tr>
+        <tr>
+          <td>Mean Sea Level Altitude</td>
+          <td><span id='meanSeaLevelAlt'></span> m</td>
+        </tr>
+        <tr>
+          <td>GDOP</td>
+          <td><span id='gdop'></span></td>
+        </tr>
+        <tr>
+          <td>PDOP</td>
+          <td><span id='pdop'></span></td>
+        </tr>
+        <tr>
+          <td>HDOP</td>
+          <td><span id='hdop'></span></td>
+        </tr>
+        <tr>
+          <td>VDOP</td>
+          <td><span id='vdop'></span></td>
+        </tr>
+        <tr>
+          <td>TDOP</td>
+          <td><span id='tdop'></span></td>
+        </tr>
+        <tr>
+          <td>ECEF X</td>
+          <td><span id='ecefX'></span> km</td>
+        </tr>
+        <tr>
+          <td>EXEF Y</td>
+          <td><span id='ecefY'></span> km</td>
+        </tr>
+        <tr>
+          <td>ECEF Z</td>
+          <td><span id='ecefZ'></span> km</td>
+        </tr>
+        <tr>
+          <td>ECEF VX</td>
+          <td><span id='ecefVx'></span> km / s</td>
+        </tr>
+          <tr>
+          <td>ECEF VY</td>
+          <td><span id='ecefVy'></span> km / s</td>
+        </tr>
+        <tr>
+          <td>ECEF VZ</td>
+          <td><span id='ecefVz'></span> km / s</td>
+        </tr>
+        <tr>
+          <td>UTC Timestamp</td>
+          <td><span id='timestamp'></span></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <script>
+    const FIX_MODES = {
+      0: 'NO_FIX',
+      1: '2D',
+      2: '3D',
+      3: '3D+DGPS',
+    };
+
+  const indexNames = {
+    '0x01': 'fixMode',
+    '0x02': 'numSv',
+    '0x03': 'gpsWeek',
+    '0x04': 'tow',
+    '0x05': 'lat',
+    '0x06': 'long',
+    '0x07': 'ellipAlt',
+    '0x08': 'meanSeaLevelAlt',
+    '0x09': 'gdop',
+    '0x0A': 'pdop',
+    '0x0B': 'hdop',
+    '0x0C': 'vdop',
+    '0x0D': 'tdop',
+    '0x0E': 'ecefX',
+    '0x0F': 'ecefY',
+    '0x10': 'ecefZ',
+    '0x11': 'ecefVx',
+    '0x12': 'ecefVy',
+    '0x13': 'ecefVz',
+    '0x14': 'timestamp',
+  };
+    
+  const STATES = {
+    0: 'OFF',
+    1: 'SEARCHING',
+    2: 'LOCKED_ON',
+    255: 'FAILED',
+  };
+
+  async function updateStatic() {
+    let obj = await readValue('0x6000', '0x01');
+    document.getElementById('serialBus').textContent = obj['value'];
+    obj = await readValue('0x6000', '0x02');
+    document.getElementById('gpio0').textContent = obj['value'];
+    obj = await readValue('0x6000', '0x03');
+    document.getElementById('gpio1').textContent = obj['value'];
+    obj = await readValue('0x6000', '0x04');
+    document.getElementById('mock').textContent = obj['value'];
+  }
+
+  async function updateAll() {
+    for (const index in indexNames) {
+      const obj = await readValue('0x6001', index);
+      const tmp = document.getElementById(indexNames[index]);
+
+      switch(index) {
+      case '0x01':
+        tmp.textContent = FIX_MODES[obj['value']];
+        break;
+      case '0x05':
+      case '0x06':
+        tmp.textContent = (obj['value'] / 1e7).toFixed(3);
+        break;
+      case '0x07':
+      case '0x08':
+      case '0x09':
+      case '0x0A':
+      case '0x0B':
+      case '0x0C':
+      case '0x0D':
+        tmp.textContent = (obj['value'] * 0.01).toFixed(2);
+        break;
+      case '0x0E':
+      case '0x0F':
+      case '0x10':
+      case '0x11':
+      case '0x12':
+      case '0x13':
+        tmp.textContent = (obj['value'] / 100000).toFixed(3);
+        break;
+      case '0x14':
+        const d = new Date(obj['value'] * 1000);
+        tmp.textContent = d.toLocaleString('en-US', { timeZone: 'UTC' });
+        break;
+      default:
+        tmp.textContent = obj['value'];
+      }
+    }
+    
+    let obj = await readValue('0x6000', '0x05');
+    document.getElementById('status').textContent = STATES[obj['value']];
+    obj = await readValue('0x6000', '0x07');
+    document.getElementById('timeSyncd').textContent = obj['value'];
+  }
+
+  updateStatic();
+  updateAll();
+  const interval = setInterval(function() {
+    updateAll()
+  }, 10000);
+</script>
+{% endblock %}

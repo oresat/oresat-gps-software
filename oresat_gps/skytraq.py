@@ -53,7 +53,7 @@ class SkyTrack:
                  b'\x00\x00\x00\x00\x00\x00\x68\x0d\x0a')
     '''Mock binary line'''
 
-    def __init__(self, port: str, gpio0: str, gpio1: str, mock: bool = True):
+    def __init__(self, port: str, gpio0: str, gpio1: str, mock: bool = False):
         '''
         Paramters
         ---------
