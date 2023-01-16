@@ -224,7 +224,7 @@
     
     let obj = await readValue('0x6000', '0x05');
     document.getElementById('status').textContent = STATES[obj['value']];
-    obj = await readValue('0x6000', '0x07');
+    obj = await readValue('0x6000', '0x06');
     document.getElementById('timeSyncd').textContent = obj['value'];
   }
 

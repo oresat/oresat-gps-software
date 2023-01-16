@@ -1,4 +1,4 @@
-
+from os import geteuid
 from enum import IntEnum, auto
 from time import clock_settime, CLOCK_REALTIME, sleep
 
@@ -15,8 +15,7 @@ class ControlSubindex(IntEnum):
     GPIO1 = 0x3
     MOCK = 0x4
     STATUS = 0x5
-    SYNC_ENABLE = 0x6
-    IS_SYNCD = 0x7
+    IS_SYNCD = 0x6
 
 
 class States(IntEnum):
@@ -38,6 +37,10 @@ class GPSResource(Resource):
         self._state = States.OFF
         self._timer = TimerLoop('gps resource', self._loop, 1.0)
 
+        self._uid = geteuid()
+        if self._uid != 0:
+            logger.warning('not running as root, cannot set system time to time from skytraq')
+
     def on_start(self):
 
         self.control_rec = self.od[self.INDEX_SKYTRAQ_CONTROL]
@@ -45,7 +48,6 @@ class GPSResource(Resource):
 
         # control subindexes
         self.mock_obj = self.control_rec[ControlSubindex.MOCK.value]
-        self.sync_enable_obj = self.control_rec[ControlSubindex.SYNC_ENABLE.value]
         self.is_syncd_obj = self.control_rec[ControlSubindex.IS_SYNCD.value]
         self.status_obj = self.control_rec[ControlSubindex.STATUS.value]
 
@@ -91,7 +93,7 @@ class GPSResource(Resource):
             dt = gps_datetime(data[NavData.GPS_WEEK.value], data[NavData.TOW.value])
 
             # sync clock if it hasn't been syncd yet
-            if self.sync_enable_obj.value and not self.is_syncd_obj.value:
+            if not self.is_syncd_obj.value and self._uid == 0:
                 clock_settime(CLOCK_REALTIME, dt)
                 logger.info('set time based off of skytraq time')
                 self.is_syncd_obj.value = True
@@ -146,7 +148,3 @@ class GPSResource(Resource):
                     self._state = States.OFF
                     self.data_rec[NavData.NUMBER_OF_SV.value].value = 0  # zero this for TPDO
                     self._timer.delay = 1.0
-            elif subindex == ControlSubindex.SYNC_ENABLE:  # sync time on next message
-                self.sync_enable_obj.value = True
-                self.is_syncd_obj.value = False
-
