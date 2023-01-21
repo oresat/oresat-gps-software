@@ -214,7 +214,7 @@
         tmp.textContent = (obj['value'] / 100000).toFixed(3);
         break;
       case '0x14':
-        const d = new Date(obj['value'] * 1000);
+        const d = scetToDate(obj['value']);
         tmp.textContent = d.toLocaleString('en-US', { timeZone: 'UTC' });
         break;
       default:

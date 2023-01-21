@@ -1,36 +1,25 @@
 import struct
+from collections import namedtuple
+from datetime import datetime, timedelta, timezone
 from enum import IntEnum
+from threading import Event, Thread
+from typing import Callable
 
 from serial import Serial, SerialException
 
 
+SKYTRAQ_EPOCH = datetime(1980, 1, 5, tzinfo=timezone.utc)
+'''SkyTrack's time epoch'''
+
+
+NavData = namedtuple('NavData', ['message_id', 'fix_mode', 'number_of_sv', 'gps_week', 'tow',
+                                 'latitude', 'longitude', 'ellipsoid_altitude',
+                                 'mean_sea_lvl_altitude', 'gdop', 'pdop', 'hdop', 'vdop', 'tdop',
+                                 'ecef_x', 'ecef_y', 'ecef_z', 'ecef_vx', 'ecef_vy', 'ecef_vz'])
+
+
 class SkyTrackError(Exception):
     '''An error occured with the SkyTrack'''
-
-
-class NavData(IntEnum):
-    '''NavData offsets for skytraq binary data'''
-
-    MESSAGE_ID = 0
-    FIX_MODE = 1
-    NUMBER_OF_SV = 2
-    GPS_WEEK = 3
-    TOW = 4
-    LATITUDE = 5
-    LONGITUDE = 6
-    ELLIPSOID_ALTITUDE = 7
-    MEAN_SEA_LVL_ALTITUDE = 8
-    GDOP = 9
-    PDOP = 10
-    HDOP = 11
-    VDOP = 12
-    TDOP = 13
-    ECEF_X = 14
-    ECEF_Y = 15
-    ECEF_Z = 16
-    ECEF_VX = 17
-    ECEF_VY = 18
-    ECEF_VZ = 19
 
 
 class FixMode(IntEnum):
@@ -53,80 +42,31 @@ class SkyTrack:
                  b'\x00\x00\x00\x00\x00\x00\x68\x0d\x0a')
     '''Mock binary line'''
 
-    def __init__(self, port: str, gpio0: str, gpio1: str, mock: bool = False):
+    BAUD = 9600
+    '''Baud rate of skytraq'''
+
+    def __init__(self, port: str, message_cb: Callable[[NavData], None],
+                 error_cb: Callable[[str], None], mock: bool = False):
         '''
         Paramters
         ---------
         port: str
             Serial port to use.
-        gpio0: str
-            gpio to use.
-        gpio1: str
-            gpio to use.
+        message_cb: Callable
+            Message callback funtion.
+        error_cb: Callable
+            Error callback funtion.
         mock: str
             option to mocking the skytraq.
         '''
 
         self._port = port
-        self._baud = 9600
-        self._gpio0 = gpio0
-        self._gpio1 = gpio1
+        self._message_cb = message_cb
+        self._error_cb = error_cb
         self._mock = mock
 
-        self._is_on = False
-        self._ser = None
-
-    def power_on(self):
-        ''' Turn the skytraq on'''
-
-        if not self._mock and not self._is_on:
-            try:
-                # first time will fail
-                with open('/sys/class/gpio/export', 'w') as f:
-                    f.write(self._gpio0)
-                with open('/sys/class/gpio/export', 'w') as f:
-                    f.write(self._gpio0)
-            except PermissionError:
-                pass  # first time will fail
-            with open(f'/sys/class/gpio/gpio{self._gpio0}/direction', 'w') as f:
-                f.write('out')
-            with open(f'/sys/class/gpio/gpio{self._gpio0}/value', 'w') as f:
-                f.write('1')
-
-            try:
-                # first time will fail
-                with open('/sys/class/gpio/export', 'w') as f:
-                    f.write(self._gpio1)
-                with open('/sys/class/gpio/export', 'w') as f:
-                    f.write(self._gpio1)
-            except PermissionError:
-                pass  # first time will fail
-            with open(f'/sys/class/gpio/gpio{self._gpio1}/direction', 'w') as f:
-                f.write('out')
-            with open(f'/sys/class/gpio/gpio{self._gpio1}/value', 'w') as f:
-                f.write('1')
-
-            self._ser = Serial(self._port, self._baud, timeout=0.5)
-            self._ser.write(self.BINARY_MODE)  # swap to binary mode
-
-        self._is_on = True
-
-    def power_off(self):
-        ''' Turn the skytraq off'''
-
-        if not self._mock and self._is_on:
-            self._ser.close()
-
-            with open(f'/sys/class/gpio/gpio{self._gpio0}/value', 'w') as f:
-                f.write('0')
-            with open(f'/sys/class/gpio/gpio{self._gpio1}/value', 'w') as f:
-                f.write('0')
-
-        self._is_on = False
-
-    @property
-    def is_on(self) -> bool:
-        return self._is_on
+        self._event = Event()
+        self._thread = Thread(target=self._stream)
 
     def _readline(self, timeout) -> bytes:
         '''readline from skytraq serial bus
@@ -151,6 +91,7 @@ class SkyTrack:
 
         if self._mock:
             line = self.MOCK_DATA
+            self._event.wait(0.5)
         else:
             line = bytearray()
             while True:
@@ -195,17 +136,45 @@ class SkyTrack:
 
         return payload_bytes
 
-    def read(self) -> ():
-        '''Read a message from the skytraq.'''
+    def _stream(self):
+        '''Read the stream of messages from the skytraq.'''
 
-        if not self._is_on:
-            raise SkyTrackError('skytraq is not on')
+        if not self._mock:
+            ser = Serial(self._port, self.BAUD, timeout=1)
+            ser.write(self.BINARY_MODE)  # swap to binary mode
 
-        payload = self._readline(1)
+        while not self._event.is_set():
+            try:
+                payload = self._readline(1)
+                data = struct.unpack('>3BHI2i2I5H6i', payload)
+                nav_data = NavData(*data)
+                self._message_cb(nav_data)
+            except Exception as e:
+                self._error_cb(f'{e.__class__.__name__}: {e}')
 
-        try:
-            data = struct.unpack('>3BHI2i2I5H6i', payload)
-        except struct.error:
-            raise SkyTrackError('skytraq message unpack failed')
+        if not self._mock:
+            ser.close()
 
-        return data
+    def start(self):
+        '''Start read stream thread'''
+
+        self._thread.start()
+
+    def stop(self):
+        '''Stop read stream thread'''
+
+        self._event.set()
+        if self._thread.is_alive():
+            self._thread.join()
+
+
+def gps_datetime(gps_week: int, tow: int) -> float:
+    '''Get the unix time from SkyTrack's gps_week and TOW (time of week).'''
+
+    usec = tow % 100 * 1000
+    # 86400 is number of seconds in a day
+    sec = (tow / 100) % 86400
+    day = ((tow / 100) / 86400) + (gps_week * 7)
+    dt = SKYTRAQ_EPOCH + timedelta(days=day, seconds=sec, microseconds=usec)
+
+    return dt.timestamp()
