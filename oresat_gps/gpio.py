@@ -18,10 +18,10 @@ class GPIO:
         try:
             with open('/sys/class/gpio/export', 'w') as f:
                 f.write(self._num)
-        except PermissionError:
-            # first time will always fail
             with open('/sys/class/gpio/export', 'w') as f:
                 f.write(self._num)
+        except PermissionError:
+            pass  # will always fail, tho it actually works
 
         with open(f'/sys/class/gpio/gpio{self._num}/direction', 'w') as f:
             f.write('out')

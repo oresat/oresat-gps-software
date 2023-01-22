@@ -9,7 +9,7 @@ from serial import Serial, SerialException
 
 
 SKYTRAQ_EPOCH = datetime(1980, 1, 5, tzinfo=timezone.utc)
-'''SkyTrack's time epoch'''
+'''SkyTraq's time epoch'''
 
 
 NavData = namedtuple('NavData', ['message_id', 'fix_mode', 'number_of_sv', 'gps_week', 'tow',
@@ -18,8 +18,8 @@ NavData = namedtuple('NavData', ['message_id', 'fix_mode', 'number_of_sv', 'gps_
                                  'ecef_x', 'ecef_y', 'ecef_z', 'ecef_vx', 'ecef_vy', 'ecef_vz'])
 
 
-class SkyTrackError(Exception):
-    '''An error occured with the SkyTrack'''
+class SkyTraqError(Exception):
+    '''An error occured with the SkyTraq'''
 
 
 class FixMode(IntEnum):
@@ -31,7 +31,7 @@ class FixMode(IntEnum):
     FIX_3D_DGPS = 3
 
 
-class SkyTrack:
+class SkyTraq:
 
     BINARY_MODE = b'\xA0\xA1\x00\x03\x09\x02\x00\x0B\x0D\x0A'
     '''Command to swap to binary mode'''
@@ -68,7 +68,7 @@ class SkyTrack:
         self._event = Event()
         self._thread = Thread(target=self._stream)
 
-    def _readline(self, timeout) -> bytes:
+    def _readline(self, ser: Serial, timeout: float) -> bytes:
         '''readline from skytraq serial bus
 
         format:
@@ -80,7 +80,7 @@ class SkyTrack:
 
         Raises
         ------
-        SkyTrackError
+        SkyTraqError
             An error occured.
 
         Returns
@@ -96,9 +96,9 @@ class SkyTrack:
             line = bytearray()
             while True:
                 try:
-                    c = self._ser.read(timeout)
+                    c = ser.read(timeout)
                 except SerialException as exc:
-                    raise SkyTrackError(f'Serial device error: {exc}')
+                    raise SkyTraqError(f'Serial device error: {exc}')
 
                 if c:
                     line += c
@@ -109,11 +109,11 @@ class SkyTrack:
             line = bytes(line)
 
         if not line:
-            raise SkyTrackError('skytraq read serial failed')
+            raise SkyTraqError('skytraq read serial failed')
 
         line_len = len(line)
         if line_len <= 7:
-            raise SkyTrackError('skytraq message length is too short')
+            raise SkyTraqError('skytraq message length is too short')
 
         payload_len_bytes = line[2: (line_len - 4) * -1]
         payload_bytes = line[4:-3]
@@ -123,16 +123,16 @@ class SkyTrack:
         try:
             pl = struct.unpack('>H', payload_len_bytes)[0]
         except struct.error:
-            raise SkyTrackError('skytraq payload length unpack failed')
+            raise SkyTraqError('skytraq payload length unpack failed')
         if len(payload_bytes) != pl:
-            raise SkyTrackError(f'payload length does not match {len(payload_bytes)} vs {pl}')
+            raise SkyTraqError(f'payload length does not match {len(payload_bytes)} vs {pl}')
 
         # validate checksum
         cs = 0
         for i in payload_bytes:
             cs = cs ^ i
         if cs != checksum_byte:
-            raise SkyTrackError('invalid checksum')
+            raise SkyTraqError('invalid checksum')
 
         return payload_bytes
 
@@ -145,10 +145,12 @@ class SkyTrack:
 
         while not self._event.is_set():
             try:
-                payload = self._readline(1)
+                payload = self._readline(ser, 1)
                 data = struct.unpack('>3BHI2i2I5H6i', payload)
                 nav_data = NavData(*data)
                 self._message_cb(nav_data)
+            except SkyTraqError:
+                pass  # don't care, most likely a random parse error
             except Exception as e:
                 self._error_cb(f'{e.__class__.__name__}: {e}')
 
@@ -169,7 +171,7 @@ class SkyTrack:
 
 
 def gps_datetime(gps_week: int, tow: int) -> float:
-    '''Get the unix time from SkyTrack's gps_week and TOW (time of week).'''
+    '''Get the unix time from SkyTraq's gps_week and TOW (time of week).'''
 
     usec = tow % 100 * 1000
     # 86400 is number of seconds in a day

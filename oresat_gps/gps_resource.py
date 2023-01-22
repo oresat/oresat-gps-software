@@ -5,7 +5,7 @@ from time import clock_settime, CLOCK_REALTIME
 from olaf import Resource, scet_int_from_time, logger
 
 from .gpio import GPIO
-from .skytraq import SkyTrack, NavData, FixMode, gps_datetime
+from .skytraq import SkyTraq, NavData, FixMode, gps_datetime
 
 
 class ControlSubindex(IntEnum):
@@ -56,18 +56,17 @@ class GPSResource(Resource):
 
         self.mock_obj.value = self.mock_hw
         if self.mock_hw:
-            logger.warning('mocking SkyTrack')
+            logger.warning('mocking SkyTraq')
         else:
             skytraq_pin = self.control_rec[ControlSubindex.SKYTRAQ_PIN.value].value
             lna_pin = self.control_rec[ControlSubindex.LNA_PIN.value].value
             self._gpio_skytraq = GPIO(skytraq_pin)
-            self._gpio_skytraq.on()
             self._gpio_lna = GPIO(lna_pin)
-            self._gpio_lna.on()
+            self._skytraq_power_on()
 
         self._skytraq_power_on()
         serial_bus = self.control_rec[ControlSubindex.SERIAL_BUS.value].value
-        self._skytraq = SkyTrack(serial_bus, self._new_message, self._new_error, self.mock_hw)
+        self._skytraq = SkyTraq(serial_bus, self._new_message, self._new_error, self.mock_hw)
         self._skytraq.start()
         self._state = States.SEARCHING
 
@@ -128,7 +127,7 @@ class GPSResource(Resource):
 
     def _skytraq_power_on(self):
 
-        logger.info('turning SkyTrack on')
+        logger.info('turning SkyTraq on')
         if not self.mock_hw:
             self._gpio_skytraq.on()
             self._gpio_lna.on()
@@ -136,7 +135,7 @@ class GPSResource(Resource):
 
     def _skytraq_power_off(self):
 
-        logger.info('turning SkyTrack off')
+        logger.info('turning SkyTraq off')
         if not self.mock_hw:
             self._gpio_skytraq.off()
             self._gpio_lna.off()
