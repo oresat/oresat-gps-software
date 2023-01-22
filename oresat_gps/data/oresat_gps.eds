@@ -4177,14 +4177,14 @@ AccessType=const
 DefaultValue=/dev/ttyS2
 
 [6000sub2]
-ParameterName=GPIO 0
+ParameterName=SkyTraq GPIO Pin
 ObjectType=0x07
 DataType=0x0009
 AccessType=const
 DefaultValue=98
 
 [6000sub3]
-ParameterName=GPIO 1
+ParameterName=LNA GPIO Pin
 ObjectType=0x07
 DataType=0x0009
 AccessType=const

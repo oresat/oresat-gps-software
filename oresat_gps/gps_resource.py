@@ -10,8 +10,8 @@ from .skytraq import SkyTrack, NavData, FixMode, gps_datetime
 
 class ControlSubindex(IntEnum):
     SERIAL_BUS = 0x1
-    GPIO0 = 0x2
-    GPIO1 = 0x3
+    SKYTRAQ_PIN = 0x2
+    LNA_PIN = 0x3
     MOCK = 0x4
     STATUS = 0x5
     IS_SYNCD = 0x6
@@ -62,8 +62,8 @@ class GPSResource(Resource):
             lna_pin = self.control_rec[ControlSubindex.LNA_PIN.value].value
             self._gpio_skytraq = GPIO(skytraq_pin)
             self._gpio_skytraq.on()
-            self._gpio_lan = GPIO(lna_pin)
-            self._gpio_lan.on()
+            self._gpio_lna = GPIO(lna_pin)
+            self._gpio_lna.on()
 
         self._skytraq_power_on()
         serial_bus = self.control_rec[ControlSubindex.SERIAL_BUS.value].value
@@ -131,7 +131,7 @@ class GPSResource(Resource):
         logger.info('turning SkyTrack on')
         if not self.mock_hw:
             self._gpio_skytraq.on()
-            self._gpio_lan.on()
+            self._gpio_lna.on()
         self._state = States.SEARCHING
 
     def _skytraq_power_off(self):
@@ -139,5 +139,5 @@ class GPSResource(Resource):
         logger.info('turning SkyTrack off')
         if not self.mock_hw:
             self._gpio_skytraq.off()
-            self._gpio_lan.off()
+            self._gpio_lna.off()
         self._state = States.OFF
