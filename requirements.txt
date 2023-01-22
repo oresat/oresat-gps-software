@@ -2,4 +2,3 @@ oresat-olaf>=0.3.0
 pyserial
 build
 flake8
-gpio

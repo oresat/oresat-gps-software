@@ -1,7 +1,9 @@
+#!/usr/bin/env python3
 """Print parsed skytraq NMEA data"""
 
 import io
 import sys
+
 import pynmea2
 import serial
 

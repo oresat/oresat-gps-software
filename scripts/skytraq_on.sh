@@ -1,3 +1,5 @@
+#!/bin/bash
+#
 # SkyTraq
 echo 98 > /sys/class/gpio/export
 echo 98 > /sys/class/gpio/export

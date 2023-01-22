@@ -1,7 +1,9 @@
+#!/usr/bin/env python3
 """Print parsed skytraq binary data"""
 
 import sys
 import struct
+
 from serial import Serial, SerialException
 
 

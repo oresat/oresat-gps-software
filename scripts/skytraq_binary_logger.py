@@ -1,8 +1,10 @@
+#!/usr/bin/env python3
 """Log skytraq binary data"""
 
 import sys
 from datetime import datetime
 import struct
+
 from serial import Serial, SerialException
 
 # open data file

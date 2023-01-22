@@ -1,15 +1,11 @@
-import logging
 from os import geteuid
 from enum import IntEnum
 from time import clock_settime, CLOCK_REALTIME
 
-import gpio
 from olaf import Resource, scet_int_from_time, logger
 
+from .gpio import GPIO
 from .skytraq import SkyTrack, NavData, FixMode, gps_datetime
-
-# fix internal gpio the logger from over logging
-logging.getLogger().handlers[0].setLevel(logging.ERROR)
 
 
 class ControlSubindex(IntEnum):
@@ -25,7 +21,7 @@ class States(IntEnum):
     OFF = 0x00
     SEARCHING = 0x01
     LOCKED = 0x02
-    FAILED = 0xFF
+    ERROR = 0xFF
 
 
 class GPSResource(Resource):
@@ -38,8 +34,6 @@ class GPSResource(Resource):
 
         self._gpio0 = None
         self._gpio1 = None
-        self._gpio0_pin = None
-        self._gpio1_pin = None
         self._skytraq = None
         self._state = States.OFF
 
@@ -61,13 +55,15 @@ class GPSResource(Resource):
         self.is_syncd_obj.value = False
 
         self.mock_obj.value = self.mock_hw
-        self._gpio0_pin = self.control_rec[ControlSubindex.GPIO0.value].value
-        self._gpio1_pin = self.control_rec[ControlSubindex.GPIO1.value].value
         if self.mock_hw:
             logger.warning('mocking SkyTrack')
         else:
-            self._gpio0 = gpio.setup(self._gpio0_pin, gpio.OUT)
-            self._gpio1 = gpio.setup(self._gpio1_pin, gpio.OUT)
+            skytraq_pin = self.control_rec[ControlSubindex.SKYTRAQ_PIN.value].value
+            lna_pin = self.control_rec[ControlSubindex.LNA_PIN.value].value
+            self._gpio_skytraq = GPIO(skytraq_pin)
+            self._gpio_skytraq.on()
+            self._gpio_lan = GPIO(lna_pin)
+            self._gpio_lan.on()
 
         self._skytraq_power_on()
         serial_bus = self.control_rec[ControlSubindex.SERIAL_BUS.value].value
@@ -127,20 +123,21 @@ class GPSResource(Resource):
 
     def _new_error(self, error: str):
 
+        self._state = States.ERROR
         logger.error(error)
 
     def _skytraq_power_on(self):
 
         logger.info('turning SkyTrack on')
         if not self.mock_hw:
-            self._gpio0.output(self._gpio0_pin, gpio.HIGH)
-            self._gpio1.output(self._gpio1_pin, gpio.HIGH)
+            self._gpio_skytraq.on()
+            self._gpio_lan.on()
         self._state = States.SEARCHING
 
     def _skytraq_power_off(self):
 
         logger.info('turning SkyTrack off')
         if not self.mock_hw:
-            self._gpio0.output(self._gpio0_pinp, gpio.LOW)
-            self._gpio1.output(self._gpio1_pin, gpio.LOW)
+            self._gpio_skytraq.off()
+            self._gpio_lan.off()
         self._state = States.OFF
