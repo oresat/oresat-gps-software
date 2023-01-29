@@ -142,6 +142,8 @@ class SkyTraq:
         if not self._mock:
             ser = Serial(self._port, self.BAUD, timeout=1)
             ser.write(self.BINARY_MODE)  # swap to binary mode
+        else:
+            ser = None  # mocking serial bus
 
         while not self._event.is_set():
             try:
