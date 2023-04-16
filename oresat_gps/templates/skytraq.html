@@ -128,7 +128,7 @@
           <td><span id='ecefVz'></span> km / s</td>
         </tr>
         <tr>
-          <td>UTC Timestamp</td>
+          <td>Timestamp (Local TZ)</td>
           <td><span id='timestamp'></span></td>
         </tr>
       </table>
@@ -142,96 +142,99 @@
       3: '3D+DGPS',
     };
 
-  const indexNames = {
-    '0x01': 'fixMode',
-    '0x02': 'numSv',
-    '0x03': 'gpsWeek',
-    '0x04': 'tow',
-    '0x05': 'lat',
-    '0x06': 'long',
-    '0x07': 'ellipAlt',
-    '0x08': 'meanSeaLevelAlt',
-    '0x09': 'gdop',
-    '0x0A': 'pdop',
-    '0x0B': 'hdop',
-    '0x0C': 'vdop',
-    '0x0D': 'tdop',
-    '0x0E': 'ecefX',
-    '0x0F': 'ecefY',
-    '0x10': 'ecefZ',
-    '0x11': 'ecefVx',
-    '0x12': 'ecefVy',
-    '0x13': 'ecefVz',
-    '0x14': 'timestamp',
-  };
-    
-  const STATES = {
-    0: 'OFF',
-    1: 'SEARCHING',
-    2: 'LOCKED_ON',
-    255: 'FAILED',
-  };
+    const subindexNames = {
+      0x01: 'fixMode',
+      0x02: 'numSv',
+      0x03: 'gpsWeek',
+      0x04: 'tow',
+      0x05: 'lat',
+      0x06: 'long',
+      0x07: 'ellipAlt',
+      0x08: 'meanSeaLevelAlt',
+      0x09: 'gdop',
+      0x0A: 'pdop',
+      0x0B: 'hdop',
+      0x0C: 'vdop',
+      0x0D: 'tdop',
+      0x0E: 'ecefX',
+      0x0F: 'ecefY',
+      0x10: 'ecefZ',
+      0x11: 'ecefVx',
+      0x12: 'ecefVy',
+      0x13: 'ecefVz',
+      0x14: 'timestamp',
+    };
 
-  async function updateStatic() {
-    let obj = await readValue('0x6000', '0x01');
-    document.getElementById('serialBus').textContent = obj['value'];
-    obj = await readValue('0x6000', '0x02');
-    document.getElementById('gpio0').textContent = obj['value'];
-    obj = await readValue('0x6000', '0x03');
-    document.getElementById('gpio1').textContent = obj['value'];
-    obj = await readValue('0x6000', '0x04');
-    document.getElementById('mock').textContent = obj['value'];
-  }
+    const STATES = {
+      0: 'OFF',
+      1: 'SEARCHING',
+      2: 'LOCKED_ON',
+      255: 'FAILED',
+    };
 
-  async function updateAll() {
-    for (const index in indexNames) {
-      const obj = await readValue('0x6001', index);
-      const tmp = document.getElementById(indexNames[index]);
-
-      switch(index) {
-      case '0x01':
-        tmp.textContent = FIX_MODES[obj['value']];
-        break;
-      case '0x05':
-      case '0x06':
-        tmp.textContent = (obj['value'] / 1e7).toFixed(3);
-        break;
-      case '0x07':
-      case '0x08':
-      case '0x09':
-      case '0x0A':
-      case '0x0B':
-      case '0x0C':
-      case '0x0D':
-        tmp.textContent = (obj['value'] * 0.01).toFixed(2);
-        break;
-      case '0x0E':
-      case '0x0F':
-      case '0x10':
-      case '0x11':
-      case '0x12':
-      case '0x13':
-        tmp.textContent = (obj['value'] / 100000).toFixed(3);
-        break;
-      case '0x14':
-        const d = scetToDate(obj['value']);
-        tmp.textContent = d.toLocaleString('en-US', { timeZone: 'UTC' });
-        break;
-      default:
-        tmp.textContent = obj['value'];
-      }
+    async function updateStatic() {
+      let obj = await readValue('0x6000', '0x01');
+      document.getElementById('serialBus').textContent = obj['value'];
+      obj = await readValue('0x6000', '0x02');
+      document.getElementById('gpio0').textContent = obj['value'];
+      obj = await readValue('0x6000', '0x03');
+      document.getElementById('gpio1').textContent = obj['value'];
+      obj = await readValue('0x6000', '0x04');
+      document.getElementById('mock').textContent = obj['value'];
     }
-    
-    let obj = await readValue('0x6000', '0x05');
-    document.getElementById('status').textContent = STATES[obj['value']];
-    obj = await readValue('0x6000', '0x06');
-    document.getElementById('timeSyncd').textContent = obj['value'];
-  }
 
-  updateStatic();
-  updateAll();
-  const interval = setInterval(function() {
-    updateAll()
-  }, 10000);
-</script>
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    async function updateAll() {
+      let obj = await readValue('0x6001', null);
+      for (const subindex in subindexNames) {
+        const tmp = document.getElementById(subindexNames[subindex]);
+        let sub_obj = obj.subindexes[subindex];
+
+        switch(parseInt(subindex)) {
+        case 0x01:
+          tmp.textContent = FIX_MODES[sub_obj.value];
+          break;
+        case 0x05:
+        case 0x06:
+          tmp.textContent = (sub_obj.value / 1e7).toFixed(3);
+          break;
+        case 0x07:
+        case 0x08:
+        case 0x09:
+        case 0x0A:
+        case 0x0B:
+        case 0x0C:
+        case 0x0D:
+          tmp.textContent = (sub_obj.value * 0.01).toFixed(2);
+          break;
+        case 0x0E:
+        case 0x0F:
+        case 0x10:
+        case 0x11:
+        case 0x12:
+        case 0x13:
+          tmp.textContent = (sub_obj.value / 100000).toFixed(3);
+          break;
+        case 0x14:
+          const d = scetToDate(sub_obj.value);
+          tmp.textContent = d.toLocaleString('en-US', { timeZone: timezone });
+          break;
+        default:
+          tmp.textContent = sub_obj.value;
+        }
+      }
+
+      obj = await readValue('0x6000', '0x05');
+      document.getElementById('status').textContent = STATES[obj.value];
+      obj = await readValue('0x6000', '0x06');
+      document.getElementById('timeSyncd').textContent = obj.value;
+    }
+
+    updateStatic();
+    updateAll();
+    const interval = setInterval(function() {
+      updateAll();
+    }, 10000);
+  </script>
 {% endblock %}

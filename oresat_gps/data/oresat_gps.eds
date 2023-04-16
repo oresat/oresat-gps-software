@@ -110,7 +110,7 @@ AccessType=ro
 DefaultValue=0x00000000
 
 [OptionalObjects]
-SupportedObjects=85
+SupportedObjects=87
 1=0x1002
 2=0x1003
 3=0x1005
@@ -126,76 +126,78 @@ SupportedObjects=85
 13=0x1016
 14=0x1017
 15=0x1019
-16=0x1023
-17=0x1029
-18=0x1200
-19=0x1400
-20=0x1401
-21=0x1402
-22=0x1403
-23=0x1404
-24=0x1405
-25=0x1406
-26=0x1407
-27=0x1408
-28=0x1409
-29=0x140A
-30=0x140B
-31=0x140C
-32=0x140D
-33=0x140E
-34=0x140F
-35=0x1600
-36=0x1601
-37=0x1602
-38=0x1603
-39=0x1604
-40=0x1605
-41=0x1606
-42=0x1607
-43=0x1608
-44=0x1609
-45=0x160A
-46=0x160B
-47=0x160C
-48=0x160D
-49=0x160E
-50=0x160F
-51=0x1800
-52=0x1801
-53=0x1802
-54=0x1803
-55=0x1804
-56=0x1805
-57=0x1806
-58=0x1807
-59=0x1808
-60=0x1809
-61=0x180A
-62=0x180B
-63=0x180C
-64=0x180D
-65=0x180E
-66=0x180F
-67=0x1A00
-68=0x1A01
-69=0x1A02
-70=0x1A03
-71=0x1A04
-72=0x1A05
-73=0x1A06
-74=0x1A07
-75=0x1A08
-76=0x1A09
-77=0x1A0A
-78=0x1A0B
-79=0x1A0C
-80=0x1A0D
-81=0x1A0E
-82=0x1A0F
-83=0x1F80
-84=0x6000
-85=0x6001
+16=0x1021
+17=0x1022
+18=0x1023
+19=0x1029
+20=0x1200
+21=0x1400
+22=0x1401
+23=0x1402
+24=0x1403
+25=0x1404
+26=0x1405
+27=0x1406
+28=0x1407
+29=0x1408
+30=0x1409
+31=0x140A
+32=0x140B
+33=0x140C
+34=0x140D
+35=0x140E
+36=0x140F
+37=0x1600
+38=0x1601
+39=0x1602
+40=0x1603
+41=0x1604
+42=0x1605
+43=0x1606
+44=0x1607
+45=0x1608
+46=0x1609
+47=0x160A
+48=0x160B
+49=0x160C
+50=0x160D
+51=0x160E
+52=0x160F
+53=0x1800
+54=0x1801
+55=0x1802
+56=0x1803
+57=0x1804
+58=0x1805
+59=0x1806
+60=0x1807
+61=0x1808
+62=0x1809
+63=0x180A
+64=0x180B
+65=0x180C
+66=0x180D
+67=0x180E
+68=0x180F
+69=0x1A00
+70=0x1A01
+71=0x1A02
+72=0x1A03
+73=0x1A04
+74=0x1A05
+75=0x1A06
+76=0x1A07
+77=0x1A08
+78=0x1A09
+79=0x1A0A
+80=0x1A0B
+81=0x1A0C
+82=0x1A0D
+83=0x1A0E
+84=0x1A0F
+85=0x1F80
+86=0x6000
+87=0x6001
 
 [1002]
 ParameterName=Manufacturer status register
@@ -491,6 +493,22 @@ DataType=0x0005
 AccessType=rw
 DefaultValue=0
 
+;A master node can read this for a copy of the node's EDS file
+[1021]
+ParameterName=Store EDS
+ObjectType=0x07
+DataType=0x000F
+AccessType=ro
+DefaultValue=0
+
+;Indicate the format of the Store EDS
+[1022]
+ParameterName=Store format
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0
+
 [1023]
 ParameterName=OS command
 ObjectType=0x09
@@ -508,18 +526,21 @@ ParameterName=Command
 ObjectType=0x07
 DataType=0x000F
 AccessType=rw
+DefaultValue=0
 
 [1023sub2]
 ParameterName=Status
 ObjectType=0x07
 DataType=0x0005
 AccessType=ro
+DefaultValue=0
 
 [1023sub3]
 ParameterName=Reply
 ObjectType=0x07
 DataType=0x000F
 AccessType=ro
+DefaultValue=0
 
 [1029]
 ParameterName=Error behavior
@@ -592,7 +613,7 @@ ParameterName=Highest sub-index supported
 ObjectType=0x07
 DataType=0x0005
 AccessType=const
-DefaultValue=0x03
+DefaultValue=0x05
 
 [1400sub1]
 ParameterName=COB-ID used by RPDO
@@ -625,7 +646,7 @@ ParameterName=Highest sub-index supported
 ObjectType=0x07
 DataType=0x0005
 AccessType=const
-DefaultValue=0x03
+DefaultValue=0x05
 
 [1401sub1]
 ParameterName=COB-ID used by RPDO
@@ -658,7 +679,7 @@ ParameterName=Highest sub-index supported
 ObjectType=0x07
 DataType=0x0005
 AccessType=const
-DefaultValue=0x03
+DefaultValue=0x05
 
 [1402sub1]
 ParameterName=COB-ID used by RPDO
@@ -691,7 +712,7 @@ ParameterName=Highest sub-index supported
 ObjectType=0x07
 DataType=0x0005
 AccessType=const
-DefaultValue=0x03
+DefaultValue=0x05
 
 [1403sub1]
 ParameterName=COB-ID used by RPDO
@@ -724,7 +745,7 @@ ParameterName=Highest sub-index supported
 ObjectType=0x07
 DataType=0x0005
 AccessType=const
-DefaultValue=0x03
+DefaultValue=0x05
 
 [1404sub1]
 ParameterName=COB-ID used by RPDO
@@ -757,7 +778,7 @@ ParameterName=Highest sub-index supported
 ObjectType=0x07
 DataType=0x0005
 AccessType=const
-DefaultValue=0x03
+DefaultValue=0x05
 
 [1405sub1]
 ParameterName=COB-ID used by RPDO
@@ -790,7 +811,7 @@ ParameterName=Highest sub-index supported
 ObjectType=0x07
 DataType=0x0005
 AccessType=const
-DefaultValue=0x03
+DefaultValue=0x05
 
 [1406sub1]
 ParameterName=COB-ID used by RPDO
@@ -823,7 +844,7 @@ ParameterName=Highest sub-index supported
 ObjectType=0x07
 DataType=0x0005
 AccessType=const
-DefaultValue=0x03
+DefaultValue=0x05
 
 [1407sub1]
 ParameterName=COB-ID used by RPDO
@@ -856,7 +877,7 @@ ParameterName=Highest sub-index supported
 ObjectType=0x07
 DataType=0x0005
 AccessType=const
-DefaultValue=0x03
+DefaultValue=0x05
 
 [1408sub1]
 ParameterName=COB-ID used by RPDO
@@ -889,7 +910,7 @@ ParameterName=Highest sub-index supported
 ObjectType=0x07
 DataType=0x0005
 AccessType=const
-DefaultValue=0x03
+DefaultValue=0x05
 
 [1409sub1]
 ParameterName=COB-ID used by RPDO
@@ -922,7 +943,7 @@ ParameterName=Highest sub-index supported
 ObjectType=0x07
 DataType=0x0005
 AccessType=const
-DefaultValue=0x03
+DefaultValue=0x05
 
 [140Asub1]
 ParameterName=COB-ID used by RPDO
@@ -955,7 +976,7 @@ ParameterName=Highest sub-index supported
 ObjectType=0x07
 DataType=0x0005
 AccessType=const
-DefaultValue=0x03
+DefaultValue=0x05
 
 [140Bsub1]
 ParameterName=COB-ID used by RPDO
@@ -988,7 +1009,7 @@ ParameterName=Highest sub-index supported
 ObjectType=0x07
 DataType=0x0005
 AccessType=const
-DefaultValue=0x03
+DefaultValue=0x05
 
 [140Csub1]
 ParameterName=COB-ID used by RPDO
@@ -1021,7 +1042,7 @@ ParameterName=Highest sub-index supported
 ObjectType=0x07
 DataType=0x0005
 AccessType=const
-DefaultValue=0x03
+DefaultValue=0x05
 
 [140Dsub1]
 ParameterName=COB-ID used by RPDO
@@ -1054,7 +1075,7 @@ ParameterName=Highest sub-index supported
 ObjectType=0x07
 DataType=0x0005
 AccessType=const
-DefaultValue=0x03
+DefaultValue=0x05
 
 [140Esub1]
 ParameterName=COB-ID used by RPDO
@@ -1087,7 +1108,7 @@ ParameterName=Highest sub-index supported
 ObjectType=0x07
 DataType=0x0005
 AccessType=const
-DefaultValue=0x03
+DefaultValue=0x05
 
 [140Fsub1]
 ParameterName=COB-ID used by RPDO
@@ -4201,7 +4222,7 @@ DefaultValue=0
 ;
 ;States:
 ;  0x00: off
-;  0x01: searching to satellites
+;  0x01: searching for satellites
 ;  0x02: locked on >= 4 satellites
 ;  0xFF: failed
 ;
@@ -4214,6 +4235,7 @@ ObjectType=0x07
 DataType=0x0005
 AccessType=rw
 DefaultValue=0x01
+PDOMapping=1
 
 ;has the system time been sync'd to the time in the skytraq message
 [6000sub6]
@@ -4222,6 +4244,7 @@ ObjectType=0x07
 DataType=0x0001
 AccessType=ro
 DefaultValue=0
+PDOMapping=1
 
 [6001]
 ParameterName=SkyTraq Data
@@ -4566,51 +4589,39 @@ ParameterName=Error status bits
 ObjectType=0x07
 DataType=0x000A
 AccessType=ro
-DefaultValue=00000000000000000000
+DefaultValue=00 00 00 00 00 00 00 00 00 00
 
 [3000]
-ParameterName=OLAF app control
+ParameterName=Power control
 ObjectType=0x09
-SubNumber=5
+SubNumber=3
 
 [3000sub0]
 ParameterName=Highest sub-index supported
 ObjectType=0x07
 DataType=0x0005
 AccessType=const
-DefaultValue=0x04
+DefaultValue=0x02
 
-;Write true to restart the board
+;Write true to poweroff the system
 [3000sub1]
-ParameterName=Reboot Board
+ParameterName=Poweroff
 ObjectType=0x07
 DataType=0x0001
 AccessType=wo
 DefaultValue=0
 
-;Write true to poweroff the board
+;1 for a soft reset (restart daemon)
+;2 for hard reset (reboot the board)
+;3 to do a factory reset (clear all caches and reboot)
 [3000sub2]
-ParameterName=Poweroff Board
+ParameterName=Reset
 ObjectType=0x07
-DataType=0x0001
+DataType=0x0005
 AccessType=wo
 DefaultValue=0
-
-;Write true to have the OLAF app exit
-[3000sub3]
-ParameterName=Quit
-ObjectType=0x07
-DataType=0x0001
-AccessType=wo
-DefaultValue=0
-
-;Allow OLAF to control the board CPU frequency
-[3000sub4]
-ParameterName=CPU frequency
-ObjectType=0x07
-DataType=0x0001
-AccessType=rw
-DefaultValue=0
+LowLimit=0
+HighLimit=3
 
 [3001]
 ParameterName=System info
@@ -4630,7 +4641,6 @@ ParameterName=OS name
 ObjectType=0x07
 DataType=0x0009
 AccessType=ro
-DefaultValue=x
 
 ;Get the name of the OS distro running on the board
 [3001sub2]
@@ -4638,7 +4648,6 @@ ParameterName=OS distro
 ObjectType=0x07
 DataType=0x0009
 AccessType=ro
-DefaultValue=x
 
 ;Get the version of the OS running on the board
 [3001sub3]
@@ -4646,7 +4655,6 @@ ParameterName=OS kernel version
 ObjectType=0x07
 DataType=0x0009
 AccessType=ro
-DefaultValue=x
 
 ;Get the board hostname
 [3001sub4]
@@ -4654,7 +4662,6 @@ ParameterName=hostname
 ObjectType=0x07
 DataType=0x0009
 AccessType=ro
-DefaultValue=x
 
 ;Get the uptime
 [3001sub5]
@@ -4678,7 +4685,6 @@ ParameterName=CPU architecture
 ObjectType=0x07
 DataType=0x0009
 AccessType=ro
-DefaultValue=x
 
 ;Get the CPU power governor of the board
 [3001sub8]
@@ -4686,7 +4692,6 @@ ParameterName=CPU governor
 ObjectType=0x07
 DataType=0x0009
 AccessType=ro
-DefaultValue=x
 
 ;Get the CPU frequency of the board
 [3001sub9]
@@ -4723,7 +4728,6 @@ ParameterName=RemoteprocX name
 ObjectType=0x07
 DataType=0x0009
 AccessType=ro
-DefaultValue=x
 
 ;Get the state of selected remoteproc
 [3001subD]
@@ -4731,7 +4735,6 @@ ParameterName=RemoteprocX state
 ObjectType=0x07
 DataType=0x0009
 AccessType=ro
-DefaultValue=x
 
 ;Get the 1 minute load average
 [3001subE]
@@ -4909,7 +4912,6 @@ ParameterName=Filter
 ObjectType=0x07
 DataType=0x0009
 AccessType=rw
-DefaultValue=x
 
 ;Length of the current cache selected with keyword filter
 [3002sub5]
@@ -4937,7 +4939,6 @@ ParameterName=File name
 ObjectType=0x07
 DataType=0x0009
 AccessType=ro
-DefaultValue=x
 
 ;File size for the selected place in the selected cache
 [3002sub8]
@@ -4973,7 +4974,6 @@ ParameterName=File name
 ObjectType=0x07
 DataType=0x0009
 AccessType=rw
-DefaultValue=x
 
 ;Data of the file selected in subindex 1
 [3003sub2]
@@ -4981,13 +4981,14 @@ ParameterName=File data
 ObjectType=0x07
 DataType=0x000F
 AccessType=ro
+DefaultValue=0
 
-;Clear subindexes 1 and 2
+;Gets the CRC32 of the file
 [3003sub3]
-ParameterName=Reset
+ParameterName=CRC32
 ObjectType=0x07
-DataType=0x0001
-AccessType=wo
+DataType=0x0007
+AccessType=ro
 DefaultValue=0
 
 ;Delete the file selected in subindex 1
@@ -5001,14 +5002,14 @@ DefaultValue=0
 [3004]
 ParameterName=Fwrite
 ObjectType=0x09
-SubNumber=4
+SubNumber=3
 
 [3004sub0]
 ParameterName=Highest sub-index supported
 ObjectType=0x07
 DataType=0x0005
 AccessType=const
-DefaultValue=0x03
+DefaultValue=0x02
 
 ;Name of the file to be written. Must be set before index 2.
 [3004sub1]
@@ -5016,20 +5017,12 @@ ParameterName=File name
 ObjectType=0x07
 DataType=0x0009
 AccessType=rw
-DefaultValue=x
 
 ;File data for the new file written. Must set subindex 1 before writing to this subindex.
 [3004sub2]
 ParameterName=File data
 ObjectType=0x07
 DataType=0x000F
-AccessType=wo
-
-;Clear subindexes 1 and 2
-[3004sub3]
-ParameterName=Reset
-ObjectType=0x07
-DataType=0x0001
 AccessType=wo
 DefaultValue=0
 
@@ -5081,7 +5074,6 @@ ParameterName=App name
 ObjectType=0x07
 DataType=0x0009
 AccessType=ro
-DefaultValue=x
 
 [3005sub6]
 ParameterName=Daemon state
@@ -5090,13 +5082,32 @@ DataType=0x0005
 AccessType=rw
 DefaultValue=0
 
-;Write any non-zero number to get system logs. Log will be place in fread cache.
 [3006]
-ParameterName=Get log
+ParameterName=New Record
+ObjectType=0x09
+SubNumber=3
+
+[3006sub0]
+ParameterName=Highest sub-index supported
 ObjectType=0x07
 DataType=0x0005
-AccessType=rw
+AccessType=const
+DefaultValue=0x02
+
+;This will make a compress tar archive of the full system logs. It will be add to the cache.
+[3006sub1]
+ParameterName=Make logs file
+ObjectType=0x07
+DataType=0x0001
+AccessType=wo
 DefaultValue=0
+
+;Get the logs since boot as a string.
+[3006sub2]
+ParameterName=Get logs
+ObjectType=0x07
+DataType=0x0009
+AccessType=ro
 
 [3100]
 ParameterName=Updater
@@ -5140,7 +5151,6 @@ ParameterName=List updates
 ObjectType=0x07
 DataType=0x0009
 AccessType=ro
-DefaultValue=x
 
 ;Write a non-zero value to start an update
 [3100sub4]
