@@ -1,3 +1,38 @@
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "oresat-gps"
+description = "OreSat GPS OLAF app"
+readme = "README.md"
+requires-python = ">=3.7"
+license = {text = "GPL-3.0"}
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Software Development :: Embedded Systems",
+]
+dependencies = [
+    "oresat-olaf>=2.2.0",
+    "pyserial",
+]
+dynamic = ["version"]
+
+[project.scripts]
+oresat-c3 = "oresat_gps.__main__:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "oresat_gps.__version__"}
+
+[tool.setuptools.packages.find]
+exclude = ["docs*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.eds", "*.dcf", "*.html"]
