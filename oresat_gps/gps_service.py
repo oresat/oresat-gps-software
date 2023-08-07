@@ -2,7 +2,7 @@ from os import geteuid
 from enum import IntEnum
 from time import clock_settime, CLOCK_REALTIME
 
-from olaf import Resource, scet_int_from_time, logger, GPIO
+from olaf import Service, scet_int_from_time, logger, Gpio, NetworkError
 
 from .skytraq import SkyTraq, NavData, FixMode, gps_datetime
 
@@ -16,14 +16,14 @@ class ControlSubindex(IntEnum):
     IS_SYNCD = 0x6
 
 
-class States(IntEnum):
+class GpsState(IntEnum):
     OFF = 0x00
     SEARCHING = 0x01
     LOCKED = 0x02
     ERROR = 0xFF
 
 
-class GPSResource(Resource):
+class GpsService(Service):
 
     INDEX_SKYTRAQ_CONTROL = 0x6000
     INDEX_SKYTRAQ_DATA = 0x6001
@@ -34,7 +34,7 @@ class GPSResource(Resource):
         self._gpio_skytraq = None
         self._gpio_lna = None
         self._skytraq = None
-        self._state = States.OFF
+        self._state = GpsState.OFF
         self._mock_skytraq = mock_skytraq
 
         if mock_skytraq:
@@ -63,19 +63,19 @@ class GPSResource(Resource):
 
         skytraq_pin = self.control_rec[ControlSubindex.SKYTRAQ_PIN.value].value
         lna_pin = self.control_rec[ControlSubindex.LNA_PIN.value].value
-        self._gpio_skytraq = GPIO(skytraq_pin, self._mock_skytraq)
-        self._gpio_lna = GPIO(lna_pin, self._mock_skytraq)
+        self._gpio_skytraq = Gpio(skytraq_pin, self._mock_skytraq)
+        self._gpio_lna = Gpio(lna_pin, self._mock_skytraq)
         self._skytraq_power_on()
 
         serial_bus = self.control_rec[ControlSubindex.SERIAL_BUS.value].value
-        self._skytraq = SkyTraq(serial_bus, self._new_message, self._new_error, self._mock_skytraq)
-        self._skytraq.start()
-        self._state = States.SEARCHING
+        self._skytraq = SkyTraq(serial_bus, self._mock_skytraq)
+        self._state = GpsState.SEARCHING
 
-    def on_end(self):
+    def on_stop(self):
+
         self._skytraq.stop()
         self._skytraq_power_off()
-        self._state = States.OFF
+        self._state = GpsState.OFF
 
     def _on_read(self, index: int, subindex: int):
 
@@ -92,7 +92,9 @@ class GPSResource(Resource):
                 self._skytraq_power_off()
                 self.data_rec[NavData.NUMBER_OF_SV.value].value = 0  # zero this for TPDO
 
-    def _new_message(self, nav_data: NavData):
+    def on_loop(self):
+
+        nav_data = self._skytraq.read()
 
         if nav_data.fix_mode == FixMode.NO_FIX:
             self.data_rec[1].value = 0
@@ -112,32 +114,37 @@ class GPSResource(Resource):
             self.data_rec[0x14].value = scet_int_from_time(dt)
 
             # send gps tpdos
-            self.node.send_tpdo(2)
-            self.node.send_tpdo(3)
-            self.node.send_tpdo(4)
-            self.node.send_tpdo(5)
+            try:
+                self.node.send_tpdo(3)
+                self.node.send_tpdo(4)
+                self.node.send_tpdo(5)
+                self.node.send_tpdo(6)
+            except NetworkError:
+                pass  # CAN network is down
 
         # update status
         if nav_data.number_of_sv >= 4 and nav_data.fix_mode >= FixMode.FIX_2D:
-            self._state = States.LOCKED
+            self._state = GpsState.LOCKED
         else:
-            self._state = States.SEARCHING
+            self._state = GpsState.SEARCHING
 
-    def _new_error(self, error: str):
+    def on_loop_error(self, error: str):
 
-        self._state = States.ERROR
-        logger.error(error)
+        self._skytraq_power_off()
+        self._state = GpsState.ERROR
+        logger.exception(error)
+        self._skytraq.stop()
 
     def _skytraq_power_on(self):
 
         logger.info('turning SkyTraq on')
         self._gpio_skytraq.high()
         self._gpio_lna.high()
-        self._state = States.SEARCHING
+        self._state = GpsState.SEARCHING
 
     def _skytraq_power_off(self):
 
         logger.info('turning SkyTraq off')
         self._gpio_skytraq.low()
         self._gpio_lna.low()
-        self._state = States.OFF
+        self._state = GpsState.OFF

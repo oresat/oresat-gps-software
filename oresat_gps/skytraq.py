@@ -2,8 +2,7 @@ import struct
 from collections import namedtuple
 from datetime import datetime, timedelta, timezone
 from enum import IntEnum
-from threading import Event, Thread
-from typing import Callable
+from time import sleep
 
 from serial import Serial, SerialException
 
@@ -45,28 +44,19 @@ class SkyTraq:
     BAUD = 9600
     '''Baud rate of skytraq'''
 
-    def __init__(self, port: str, message_cb: Callable[[NavData], None],
-                 error_cb: Callable[[str], None], mock: bool = False):
+    def __init__(self, port: str, mock: bool = False):
         '''
         Paramters
         ---------
         port: str
             Serial port to use.
-        message_cb: Callable
-            Message callback funtion.
-        error_cb: Callable
-            Error callback funtion.
         mock: str
             option to mocking the skytraq.
         '''
 
         self._port = port
-        self._message_cb = message_cb
-        self._error_cb = error_cb
         self._mock = mock
-
-        self._event = Event()
-        self._thread = Thread(target=self._stream)
+        self._ser = None
 
     def _readline(self, ser: Serial, timeout: float) -> bytes:
         '''readline from skytraq serial bus
@@ -91,7 +81,7 @@ class SkyTraq:
 
         if self._mock:
             line = self.MOCK_DATA
-            self._event.wait(0.5)
+            sleep(0.5)
         else:
             line = bytearray()
             while True:
@@ -136,40 +126,30 @@ class SkyTraq:
 
         return payload_bytes
 
-    def _stream(self):
+    def read(self) -> NavData:
         '''Read the stream of messages from the skytraq.'''
 
-        if not self._mock:
-            ser = Serial(self._port, self.BAUD, timeout=1)
-            ser.write(self.BINARY_MODE)  # swap to binary mode
-        else:
-            ser = None  # mocking serial bus
+        try:
+            payload = self._readline(self._ser, 1)
+            data = struct.unpack('>3BHI2i2I5H6i', payload)
+            nav_data = NavData(*data)
+        except Exception as e:
+            raise SkyTraqError(f'Failed to read or parse message: {e}')
 
-        while not self._event.is_set():
-            try:
-                payload = self._readline(ser, 1)
-                data = struct.unpack('>3BHI2i2I5H6i', payload)
-                nav_data = NavData(*data)
-                self._message_cb(nav_data)
-            except SkyTraqError:
-                pass  # don't care, most likely a random parse error
-            except Exception as e:
-                self._error_cb(f'{e.__class__.__name__}: {e}')
-
-        if not self._mock:
-            ser.close()
+        return nav_data
 
     def start(self):
-        '''Start read stream thread'''
+        '''Start the skytraq'''
 
-        self._thread.start()
+        if not self._mock:
+            self._ser = Serial(self._port, self.BAUD, timeout=1)
+            self._ser.write(self.BINARY_MODE)  # swap to binary mode
 
     def stop(self):
-        '''Stop read stream thread'''
+        '''Stop the skytraq'''
 
-        self._event.set()
-        if self._thread.is_alive():
-            self._thread.join()
+        if not self._mock:
+            self._ser.close()
 
 
 def gps_datetime(gps_week: int, tow: int) -> float:
