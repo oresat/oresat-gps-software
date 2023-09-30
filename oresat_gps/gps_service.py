@@ -4,25 +4,15 @@ GPS SkyTraq Service.
 Reads the GPS data stream from SkyTraq and puts the data into the OD.
 """
 
+from datetime import datetime
 from enum import IntEnum
 from os import geteuid
 from time import CLOCK_REALTIME, clock_settime
 
 import canopen
-from olaf import Gpio, NetworkError, Service, logger, scet_int_from_time
+from olaf import Gpio, NetworkError, Service, logger
 
-from .skytraq import FixMode, NavData, SkyTraq, gps_datetime
-
-
-class ControlSubindex(IntEnum):
-    """CANopen Subindexes for GPS controls."""
-
-    SERIAL_BUS = 0x1
-    SKYTRAQ_PIN = 0x2
-    LNA_PIN = 0x3
-    MOCK = 0x4
-    STATUS = 0x5
-    IS_SYNCD = 0x6
+from .skytraq import FixMode, SkyTraq, gps_datetime
 
 
 class GpsState(IntEnum):
@@ -37,94 +27,71 @@ class GpsState(IntEnum):
 class GpsService(Service):
     """GPS SkyTraq Service."""
 
-    INDEX_SKYTRAQ_CONTROL = 0x6000
-    INDEX_SKYTRAQ_DATA = 0x6001
-
-    def __init__(self, mock_skytraq: bool):
+    def __init__(self, skytraq: SkyTraq, gpio_lna: Gpio, gpio_skytraq: Gpio):
         super().__init__()
 
-        self._gpio_skytraq = None
-        self._gpio_lna = None
-        self._skytraq = None
-        self._state = GpsState.OFF
-        self._mock_skytraq = mock_skytraq
+        self._gpio_skytraq = gpio_skytraq
+        self._gpio_lna = gpio_lna
+        self._skytraq = skytraq
 
-        if mock_skytraq:
-            logger.warning("mocking SkyTraq and GPIO power pins")
+        self._state = GpsState.OFF
 
         self._uid = geteuid()
         if self._uid != 0:
             logger.warning("not running as root, cannot set system time to time from skytraq")
 
-        self.control_rec: canopen.objectdictionary.Variable = None
-        self.data_rec: canopen.objectdictionary.Variable = None
         self.is_syncd_obj: canopen.objectdictionary.Variable = None
-        self.status_obj: canopen.objectdictionary.Variable = None
 
     def on_start(self):
+        self.node.add_sdo_callbacks("card_data", "status", self._on_read, self._on_write)
 
-        self.control_rec = self.node.od[self.INDEX_SKYTRAQ_CONTROL]
-        self.data_rec = self.node.od[self.INDEX_SKYTRAQ_DATA]
-
-        self.node.add_sdo_read_callback(self.INDEX_SKYTRAQ_CONTROL, self._on_read)
-        self.node.add_sdo_write_callback(self.INDEX_SKYTRAQ_CONTROL, self._on_write)
-
-        self.control_rec[ControlSubindex.MOCK.value].value = self._mock_skytraq
-
-        # control subindexes
-        self.is_syncd_obj = self.control_rec[ControlSubindex.IS_SYNCD.value]
-        self.status_obj = self.control_rec[ControlSubindex.STATUS.value]
-
+        self.is_syncd_obj = self.node.od["card_data"]["time_syncd"]
         # make sure the flag for the time has been syncd is set to false
         self.is_syncd_obj.value = False
 
-        skytraq_pin = self.control_rec[ControlSubindex.SKYTRAQ_PIN.value].value
-        lna_pin = self.control_rec[ControlSubindex.LNA_PIN.value].value
-        self._gpio_skytraq = Gpio(skytraq_pin, self._mock_skytraq)
-        self._gpio_lna = Gpio(lna_pin, self._mock_skytraq)
         self._skytraq_power_on()
-
-        serial_bus = self.control_rec[ControlSubindex.SERIAL_BUS.value].value
-        self._skytraq = SkyTraq(serial_bus, self._mock_skytraq)
-        self._state = GpsState.SEARCHING
 
     def on_stop(self):
         self._skytraq.stop()
         self._skytraq_power_off()
-        self._state = GpsState.OFF
 
-    def _on_read(self, index: int, subindex: int):
-        if index == self.INDEX_SKYTRAQ_CONTROL and subindex == ControlSubindex.STATUS:
-            return self._state.value
+    def _on_read(self):
+        return self._state.value
 
-    def _on_write(self, index: int, subindex: int, value):
-        if index == self.INDEX_SKYTRAQ_CONTROL and subindex == ControlSubindex.STATUS:
-            # turn skytraq on/off
-            if value:
-                self._skytraq_power_on()
-            else:
-                self._skytraq_power_off()
-                self.data_rec[2].value = 0  # zero the num of sv for TPDO
+    def _on_write(self, value):
+        # turn skytraq on/off
+        if value:
+            self._skytraq_power_on()
+        else:
+            self._skytraq_power_off()
 
     def on_loop(self):
         nav_data = self._skytraq.read()
+        card_data_rec = self.node.od["card_data"]
 
         if nav_data.fix_mode == FixMode.NO_FIX:
-            self.data_rec[1].value = 0
+            card_data_rec["fix_mode"] = FixMode.NO_FIX.value
         else:
             # datetime from gps message
-            dt = gps_datetime(nav_data.gps_week, nav_data.tow)
+            ts = gps_datetime(nav_data.gps_week, nav_data.tow)
 
             # sync clock if it hasn't been syncd yet
             if not self.is_syncd_obj.value and self._uid == 0:
-                clock_settime(CLOCK_REALTIME, dt)
+                clock_settime(CLOCK_REALTIME, ts)
                 logger.info("set time based off of skytraq time")
                 self.is_syncd_obj.value = True
 
             # add all skytraq data to OD
-            for i in range(len(nav_data)):
-                self.data_rec[i].value = nav_data[i]
-            self.data_rec[0x14].value = scet_int_from_time(dt)
+            for i in nav_data._asdict().keys():
+                if i == "message_id":
+                    continue
+                card_data_rec[i].value = nav_data._asdict()[i]
+
+            dt = datetime.fromtimestamp(ts)
+            ms_since_midnight = (((((dt.hour * 60) + dt.minute) * 60) + dt.second) * 1000) + (
+                dt.microsecond // 1000
+            )
+            card_data_rec["time_since_midnight"].value = ms_since_midnight
 
             # send gps tpdos
             try:
@@ -158,3 +125,4 @@ class GpsService(Service):
         self._gpio_skytraq.low()
         self._gpio_lna.low()
         self._state = GpsState.OFF
+        self.node.od["card_data"]["number_of_sv"].value = 0  # zero the num of sv for TPDO

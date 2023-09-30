@@ -22,8 +22,8 @@ NavData = namedtuple(
         "tow",
         "latitude",
         "longitude",
-        "ellipsoid_altitude",
-        "mean_sea_lvl_altitude",
+        "ellipsoid_alt",
+        "mean_sea_lvl_alt",
         "gdop",
         "pdop",
         "hdop",
@@ -50,6 +50,23 @@ class FixMode(IntEnum):
     FIX_2D = 1
     FIX_3D = 2
     FIX_3D_DGPS = 3
+
+
+def readline(ser: Serial, timeout: float) -> bytes:
+    """Read from serial bus."""
+
+    line = bytearray()
+
+    while True:
+        c = ser.read(timeout)
+        if c:
+            line += c
+            if line[-2:] == b"\r\n":
+                break
+        else:
+            break
+
+    return bytes(line)
 
 
 class SkyTraq:
@@ -83,8 +100,9 @@ class SkyTraq:
         self._mock = mock
         self._ser = None
 
-    def _readline(self, ser: Serial, timeout: float) -> bytes:
-        """readline from skytraq serial bus
+    def _read(self) -> bytes:
+        """
+        Read from skytraq serial bus.
 
         format:
             [0xA0A1][PL][ID][P][CS][\r\n]
@@ -108,21 +126,10 @@ class SkyTraq:
             line = self.MOCK_DATA
             sleep(0.5)
         else:
-            line = bytearray()
-            while True:
-                try:
-                    c = ser.read(timeout)
-                except SerialException as exc:
-                    raise SkyTraqError(f"Serial device error: {exc}")
-
-                if c:
-                    line += c
-                    if line[-2:] == b"\r\n":
-                        break
-                else:
-                    break
-            line = bytes(line)
-
+            try:
+                line = readline(self._ser, 1)
+            except SerialException as e:
+                raise SkyTraqError(e)
         if not line:
             raise SkyTraqError("skytraq read serial failed")
 
@@ -145,7 +152,7 @@ class SkyTraq:
         # validate checksum
         cs = 0
         for i in payload_bytes:
-            cs = cs ^ i
+            cs ^= i
         if cs != checksum_byte:
             raise SkyTraqError("invalid checksum")
 
@@ -154,12 +161,12 @@ class SkyTraq:
     def read(self) -> NavData:
         """Read the stream of messages from the skytraq."""
 
+        payload = self._read()
         try:
-            payload = self._readline(self._ser, 1)
             data = struct.unpack(">3BHI2i2I5H6i", payload)
             nav_data = NavData(*data)
-        except Exception as e:
-            raise SkyTraqError(f"Failed to read or parse message: {e}")
+        except (struct.error, TypeError) as e:
+            raise SkyTraqError(e)
 
         return nav_data
 
@@ -178,7 +185,7 @@ class SkyTraq:
 
 
 def gps_datetime(gps_week: int, tow: int) -> float:
-    """Get the unix time from SkyTraq's gps_week and TOW (time of week)."""
+    """Get the unix time from GPS week and TOW (time of week)."""
 
     usec = tow % 100 * 1000
     # 86400 is number of seconds in a day

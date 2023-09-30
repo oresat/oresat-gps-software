@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
 {% block content %}
   <style>
@@ -18,33 +18,17 @@
       grid-template-columns: auto auto;
     }
   </style>
-  <div id='grid'>
+  <div id="grid">
     <div>
       <h4>SkyTraq Control</h4>
       <table>
         <tr>
-          <td>Serial Bus</td>
-          <td><span id='serialBus'></span></td>
-        </tr>
-        <tr>
-          <td>SkyTraq GPIO Pin</td>
-          <td><span id='gpio0'></span></td>
-        </tr>
-        <tr>
-          <td>LNA GPIO Pin</td>
-          <td><span id='gpio1'></span></td>
-        </tr>
-        <tr>
-          <td>Mocked</td>
-          <td><span id='mock'></span></td>
-        </tr>
-        <tr>
           <td>Status</td>
-          <td><span id='status'></span></td>
+          <td><span id="status"></span></td>
         </tr>
         <tr>
           <td>Time Syncd</td>
-          <td><span id='timeSyncd'></span></td>
+          <td><span id="time_syncd"></span></td>
         </tr>
       </table>
     </div>
@@ -53,185 +37,147 @@
       <table>
         <tr>
           <td>Fix Mode</td>
-          <td><span id='fixMode'></span></td>
+          <td><span id="fix_mode"></span></td>
         </tr>
         <tr>
           <td>Number of SVs</td>
-          <td><span id='numSv'></span></td>
+          <td><span id="number_of_sv"></span></td>
         </tr>
         <tr>
           <td>GPS Week</td>
-          <td><span id='gpsWeek'></span></td>
+          <td><span id="gps_week"></span></td>
         </tr>
         <tr>
           <td>TOW</td>
-          <td><span id='tow'></span></td>
+          <td><span id="tow"></span> s</td>
         </tr>
         <tr>
           <td>Latitude</td>
-          <td><span id='lat'></span> degrees</td>
+          <td><span id="latitude"></span> degrees</td>
         </tr>
         <tr>
           <td>Longitude</td>
-          <td><span id='long'></span> degrees</td>
+          <td><span id="longitude"></span> degrees</td>
         </tr>
         <tr>
           <td>Ellipsoid Altitude</td>
-          <td><span id='ellipAlt'></span> m</td>
+          <td><span id="ellipsoid_alt"></span> m</td>
         </tr>
         <tr>
           <td>Mean Sea Level Altitude</td>
-          <td><span id='meanSeaLevelAlt'></span> m</td>
+          <td><span id="mean_sea_lvl_alt"></span> m</td>
         </tr>
         <tr>
           <td>GDOP</td>
-          <td><span id='gdop'></span></td>
+          <td><span id="gdop"></span></td>
         </tr>
         <tr>
           <td>PDOP</td>
-          <td><span id='pdop'></span></td>
+          <td><span id="pdop"></span></td>
         </tr>
         <tr>
           <td>HDOP</td>
-          <td><span id='hdop'></span></td>
+          <td><span id="hdop"></span></td>
         </tr>
         <tr>
           <td>VDOP</td>
-          <td><span id='vdop'></span></td>
+          <td><span id="vdop"></span></td>
         </tr>
         <tr>
           <td>TDOP</td>
-          <td><span id='tdop'></span></td>
+          <td><span id="tdop"></span></td>
         </tr>
         <tr>
           <td>ECEF X</td>
-          <td><span id='ecefX'></span> km</td>
+          <td><span id="ecef_x"></span> km</td>
         </tr>
         <tr>
           <td>EXEF Y</td>
-          <td><span id='ecefY'></span> km</td>
+          <td><span id="ecef_y"></span> km</td>
         </tr>
         <tr>
           <td>ECEF Z</td>
-          <td><span id='ecefZ'></span> km</td>
+          <td><span id="ecef_z"></span> km</td>
         </tr>
         <tr>
           <td>ECEF VX</td>
-          <td><span id='ecefVx'></span> km / s</td>
+          <td><span id="ecef_vx"></span> km / s</td>
         </tr>
           <tr>
           <td>ECEF VY</td>
-          <td><span id='ecefVy'></span> km / s</td>
+          <td><span id="ecef_vy"></span> km / s</td>
         </tr>
         <tr>
           <td>ECEF VZ</td>
-          <td><span id='ecefVz'></span> km / s</td>
-        </tr>
-        <tr>
-          <td>Timestamp (Local TZ)</td>
-          <td><span id='timestamp'></span></td>
+          <td><span id="ecef_vz"></span> km / s</td>
         </tr>
       </table>
     </div>
   </div>
   <script>
     const FIX_MODES = {
-      0: 'NO_FIX',
-      1: '2D',
-      2: '3D',
-      3: '3D+DGPS',
-    };
-
-    const subindexNames = {
-      0x01: 'fixMode',
-      0x02: 'numSv',
-      0x03: 'gpsWeek',
-      0x04: 'tow',
-      0x05: 'lat',
-      0x06: 'long',
-      0x07: 'ellipAlt',
-      0x08: 'meanSeaLevelAlt',
-      0x09: 'gdop',
-      0x0A: 'pdop',
-      0x0B: 'hdop',
-      0x0C: 'vdop',
-      0x0D: 'tdop',
-      0x0E: 'ecefX',
-      0x0F: 'ecefY',
-      0x10: 'ecefZ',
-      0x11: 'ecefVx',
-      0x12: 'ecefVy',
-      0x13: 'ecefVz',
-      0x14: 'timestamp',
+      0: "NO_FIX",
+      1: "2D",
+      2: "3D",
+      3: "3D+DGPS",
     };
 
     const STATES = {
-      0: 'OFF',
-      1: 'SEARCHING',
-      2: 'LOCKED_ON',
-      255: 'FAILED',
+      0: "OFF",
+      1: "SEARCHING",
+      2: "LOCKED_ON",
+      255: "FAILED",
     };
-
-    async function updateStatic() {
-      let obj = await readValue('0x6000', '0x01');
-      document.getElementById('serialBus').textContent = obj['value'];
-      obj = await readValue('0x6000', '0x02');
-      document.getElementById('gpio0').textContent = obj['value'];
-      obj = await readValue('0x6000', '0x03');
-      document.getElementById('gpio1').textContent = obj['value'];
-      obj = await readValue('0x6000', '0x04');
-      document.getElementById('mock').textContent = obj['value'];
-    }
 
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     async function updateAll() {
-      let obj = await readValue('0x6001', null);
-      for (const subindex in subindexNames) {
-        const tmp = document.getElementById(subindexNames[subindex]);
+      let obj = await readValue("card_data", null);
+      for (const subindex in obj.subindexes) {
         let sub_obj = obj.subindexes[subindex];
+        const tmp = document.getElementById(sub_obj.name);
 
-        switch(parseInt(subindex)) {
-        case 0x01:
+        switch(sub_obj.name) {
+        case "fix_mode":
           tmp.textContent = FIX_MODES[sub_obj.value];
           break;
-        case 0x05:
-        case 0x06:
+        case "number_of_sv":
+        case "gps_week":
+          tmp.textContent = sub_obj.value;
+          break;
+        case "latitude":
+        case "longitude":
           tmp.textContent = (sub_obj.value / 1e7).toFixed(3);
           break;
-        case 0x07:
-        case 0x08:
-        case 0x09:
-        case 0x0A:
-        case 0x0B:
-        case 0x0C:
-        case 0x0D:
+        case "tow":
+        case "ellipsoid_alt":
+        case "mean_sea_lvl_alt":
+        case "gdop":
+        case "pdop":
+        case "hdop":
+        case "vdop":
+        case "tdop":
           tmp.textContent = (sub_obj.value * 0.01).toFixed(2);
           break;
-        case 0x0E:
-        case 0x0F:
-        case 0x10:
-        case 0x11:
-        case 0x12:
-        case 0x13:
+        case "ecef_x":
+        case "ecef_y":
+        case "ecef_z":
+        case "ecef_vx":
+        case "ecef_vy":
+        case "ecef_vz":
           tmp.textContent = (sub_obj.value / 100000).toFixed(3);
           break;
-        case 0x14:
-          const d = scetToDate(sub_obj.value);
-          tmp.textContent = d.toLocaleString('en-US', { timeZone: timezone });
-          break;
         default:
-          tmp.textContent = sub_obj.value;
+          continue;
         }
       }
 
-      obj = await readValue('0x6000', '0x05');
-      document.getElementById('status').textContent = STATES[obj.value];
-      obj = await readValue('0x6000', '0x06');
-      document.getElementById('timeSyncd').textContent = obj.value;
+      obj = await readValue("card_data", "status");
+      document.getElementById("status").textContent = STATES[obj.value];
+      obj = await readValue("card_data", "time_syncd");
+      document.getElementById("time_syncd").textContent = obj.value;
     }
 
-    updateStatic();
     updateAll();
     const interval = setInterval(function() {
       updateAll();

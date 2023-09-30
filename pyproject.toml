@@ -35,7 +35,7 @@ version = {attr = "oresat_gps.__version__"}
 exclude = ["docs*"]
 
 [tool.setuptools.package-data]
-"*" = ["*.eds", "*.dcf", "*.html"]
+"*" = ["*.html"]
 
 [tool.black]
 line_length = 100
@@ -53,11 +53,12 @@ linters = "pycodestyle,pyflakes,pylint,mccabe,mypy,radon"
 # R0914:    Too many local variables
 # W1514:    Using open without explicitly specifying an encoding
 # W0707:    Consider explicitly re-raising
-ignore = "C0103,E203,W0613,R0902,R901,R0913,R0914,W1514,W0707"
+# C901:     Function is too complex
+ignore = "C0103,E203,W0613,R0902,R901,R0913,R0914,W1514,W0707,C901"
 max_line_length = 100
 
 [[tool.mypy.overrides]]
-module = "canopen,olaf,serial,pynmea2"
+module = "canopen,olaf,serial,oresat_od_db"
 ignore_missing_imports = true
 
 [tool.isort]

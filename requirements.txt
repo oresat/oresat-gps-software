@@ -1,4 +1,6 @@
+black
 build
-flake8
+isort
 oresat-olaf>=2.2.0
+pylama
 pyserial
