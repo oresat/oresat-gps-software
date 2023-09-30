@@ -36,3 +36,30 @@ exclude = ["docs*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.eds", "*.dcf", "*.html"]
+
+[tool.black]
+line_length = 100
+
+[tool.pylama]
+format = "pylint"
+skip = "*/.tox/*,*/.env/,*/.git/*,*/.github/*,*/build/*"
+linters = "pycodestyle,pyflakes,pylint,mccabe,mypy,radon"
+# C0103:    Arguments are not snake_case naming style or too short
+# E203:     Whitespace before ':' (black does this)
+# W0613:    Unused argument
+# R0902:    Too many instance attributes
+# R901:     Too complex
+# R0913:    Too many arguments
+# R0914:    Too many local variables
+# W1514:    Using open without explicitly specifying an encoding
+# W0707:    Consider explicitly re-raising
+ignore = "C0103,E203,W0613,R0902,R901,R0913,R0914,W1514,W0707"
+max_line_length = 100
+
+[[tool.mypy.overrides]]
+module = "canopen,olaf,serial,pynmea2"
+ignore_missing_imports = true
+
+[tool.isort]
+profile = "black"
+line_length = 100

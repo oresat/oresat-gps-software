@@ -11,7 +11,7 @@ import serial
 def main():
     """loop and print data"""
 
-    ser = serial.Serial('/dev/ttyS2', 9600, timeout=5.0)
+    ser = serial.Serial("/dev/ttyS2", 9600, timeout=5.0)
     sio = io.TextIOWrapper(io.BufferedRWPair(ser, ser))
 
     while 1:
@@ -20,10 +20,10 @@ def main():
             msg = pynmea2.parse(line)
             print(repr(msg))
         except serial.SerialException as exc:
-            print('Device error: {}'.format(exc))
+            print("Device error: {}".format(exc))
             break
         except pynmea2.ParseError as exc:
-            print('Parse error: {}'.format(exc))
+            print("Parse error: {}".format(exc))
             continue
 
 
