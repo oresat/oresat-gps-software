@@ -1,6 +1,6 @@
 black
 build
 isort
-oresat-olaf>=2.2.0
+oresat-olaf>=3.0.0
 pylama
 pyserial

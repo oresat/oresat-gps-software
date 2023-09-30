@@ -20,7 +20,7 @@ classifiers = [
     "Topic :: Software Development :: Embedded Systems",
 ]
 dependencies = [
-    "oresat-olaf>=2.2.0",
+    "oresat-olaf>=3.0.0",
     "pyserial",
 ]
 dynamic = ["version"]
