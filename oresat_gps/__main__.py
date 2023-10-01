@@ -3,8 +3,9 @@
 import os
 
 from olaf import Gpio, app, olaf_run, olaf_setup, render_olaf_template, rest_api
-from oresat_od_db.oresat0_5 import GPS_OD
+from oresat_od_db import OD_DB, NodeId
 
+from . import __version__
 from .gps_service import GpsService
 from .skytraq import SkyTraq
 
@@ -21,9 +22,11 @@ def main():
 
     path = os.path.dirname(os.path.abspath(__file__))
 
-    args = olaf_setup(GPS_OD)
+    args = olaf_setup(OD_DB, NodeId.GPS)
     mock_args = [i.lower() for i in args.mock_hw]
     mock_skytraq = "skytraq" in mock_args or "all" in mock_args
+
+    app.od["common_data"]["sw_version"].value = __version__
 
     skytraq = SkyTraq("/dev/ttyS2", mock_skytraq)
     gpio_lna = Gpio("MAX_EN", mock_skytraq)

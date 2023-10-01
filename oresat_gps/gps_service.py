@@ -125,4 +125,3 @@ class GpsService(Service):
         self._gpio_skytraq.low()
         self._gpio_lna.low()
         self._state = GpsState.OFF
-        self.node.od["card_data"]["number_of_sv"].value = 0  # zero the num of sv for TPDO
