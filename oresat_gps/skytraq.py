@@ -98,7 +98,7 @@ class SkyTraq:
 
         self._port = port
         self._mock = mock
-        self._ser = None
+        self._ser: Serial = None
 
     def _read(self) -> bytes:
         """
@@ -170,18 +170,26 @@ class SkyTraq:
 
         return nav_data
 
-    def start(self):
-        """Start the skytraq"""
+    def connect(self):
+        """Connect to the skytraq serial bus."""
 
         if not self._mock:
             self._ser = Serial(self._port, self.BAUD, timeout=1)
             self._ser.write(self.BINARY_MODE)  # swap to binary mode
 
-    def stop(self):
-        """Stop the skytraq"""
+    def disconnect(self):
+        """Disconnect from the skytraq serial bus."""
 
         if not self._mock:
             self._ser.close()
+
+    @property
+    def is_conencted(self) -> bool:
+        """Status of the cconnection to the skytraq serial bus."""
+
+        if not self._mock:
+            return self._ser.is_open
+        return True
 
 
 def gps_datetime(gps_week: int, tow: int) -> float:

@@ -52,7 +52,6 @@ class GpsService(Service):
         self._skytraq_power_on()
 
     def on_stop(self):
-        self._skytraq.stop()
         self._skytraq_power_off()
 
     def _on_read(self):
@@ -66,6 +65,10 @@ class GpsService(Service):
             self._skytraq_power_off()
 
     def on_loop(self):
+        if not self._skytraq.is_conencted:
+            self.sleep(0.1)
+            return
+
         nav_data = self._skytraq.read()
         card_data_rec = self.node.od["card_data"]
 
@@ -118,10 +121,12 @@ class GpsService(Service):
         logger.info("turning SkyTraq on")
         self._gpio_skytraq.high()
         self._gpio_lna.high()
+        self._skytraq.connect()
         self._state = GpsState.SEARCHING
 
     def _skytraq_power_off(self):
         logger.info("turning SkyTraq off")
-        self._gpio_skytraq.low()
+        self._skytraq.disconnect()
         self._gpio_lna.low()
+        self._gpio_skytraq.low()
         self._state = GpsState.OFF
