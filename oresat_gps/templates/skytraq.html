@@ -132,7 +132,7 @@
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     async function updateAll() {
-      let obj = await readValue("card_data", null);
+      let obj = await readValue("skytraq", null);
       for (const subindex in obj.subindexes) {
         let sub_obj = obj.subindexes[subindex];
         const tmp = document.getElementById(sub_obj.name);
@@ -172,9 +172,9 @@
         }
       }
 
-      obj = await readValue("card_data", "status");
+      obj = await readValue("status", null);
       document.getElementById("status").textContent = STATES[obj.value];
-      obj = await readValue("card_data", "time_syncd");
+      obj = await readValue("time_syncd", null);
       document.getElementById("time_syncd").textContent = obj.value;
     }
 

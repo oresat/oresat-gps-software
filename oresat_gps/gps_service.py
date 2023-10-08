@@ -43,9 +43,9 @@ class GpsService(Service):
         self.is_syncd_obj: canopen.objectdictionary.Variable = None
 
     def on_start(self):
-        self.node.add_sdo_callbacks("card_data", "status", self._on_read, self._on_write)
+        self.node.add_sdo_callbacks("status", None, self._on_read, self._on_write)
 
-        self.is_syncd_obj = self.node.od["card_data"]["time_syncd"]
+        self.is_syncd_obj = self.node.od["time_syncd"]
         # make sure the flag for the time has been syncd is set to false
         self.is_syncd_obj.value = False
 
@@ -70,10 +70,10 @@ class GpsService(Service):
             return
 
         nav_data = self._skytraq.read()
-        card_data_rec = self.node.od["card_data"]
+        skytraq_rec = self.node.od["skytraq"]
 
         if nav_data.fix_mode == FixMode.NO_FIX:
-            card_data_rec["fix_mode"] = FixMode.NO_FIX.value
+            skytraq_rec["fix_mode"] = FixMode.NO_FIX.value
         else:
             # datetime from gps message
             ts = gps_datetime(nav_data.gps_week, nav_data.tow)
@@ -88,13 +88,13 @@ class GpsService(Service):
             for i in nav_data._asdict().keys():
                 if i == "message_id":
                     continue
-                card_data_rec[i].value = nav_data._asdict()[i]
+                skytraq_rec[i].value = nav_data._asdict()[i]
 
             dt = datetime.fromtimestamp(ts)
             ms_since_midnight = (((((dt.hour * 60) + dt.minute) * 60) + dt.second) * 1000) + (
                 dt.microsecond // 1000
             )
-            card_data_rec["time_since_midnight"].value = ms_since_midnight
+            skytraq_rec["time_since_midnight"].value = ms_since_midnight
 
             # send gps tpdos
             try:

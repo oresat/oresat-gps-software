@@ -1,6 +1,7 @@
 black
 build
 isort
+oresat-od-database
 oresat-olaf>=3.0.0
 pylama
 pyserial

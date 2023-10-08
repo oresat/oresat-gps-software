@@ -20,6 +20,7 @@ classifiers = [
     "Topic :: Software Development :: Embedded Systems",
 ]
 dependencies = [
+    "oresat_od_db",
     "oresat-olaf>=3.0.0",
     "pyserial",
 ]

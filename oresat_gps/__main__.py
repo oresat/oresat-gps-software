@@ -26,7 +26,7 @@ def main():
     mock_args = [i.lower() for i in args.mock_hw]
     mock_skytraq = "skytraq" in mock_args or "all" in mock_args
 
-    app.od["common_data"]["sw_version"].value = __version__
+    app.od["versions"]["sw_version"].value = __version__
 
     skytraq = SkyTraq("/dev/ttyS2", mock_skytraq)
     gpio_lna = Gpio("MAX_EN", mock_skytraq)
