@@ -12,7 +12,7 @@ from time import CLOCK_REALTIME, clock_settime
 import canopen
 from olaf import Gpio, NetworkError, Service, logger
 
-from .skytraq import FixMode, SkyTraq, gps_datetime
+from .skytraq import FixMode, SkyTraq, SkyTraqError, gps_datetime
 
 
 class GpsState(IntEnum):
@@ -67,13 +67,18 @@ class GpsService(Service):
     def on_loop(self):
         if not self._skytraq.is_conencted:
             self.sleep(0.1)
+            return  # do nothing
+
+        try:
+            nav_data = self._skytraq.read()
+        except SkyTraqError as e:
+            logger.warning(e)
             return
 
-        nav_data = self._skytraq.read()
         skytraq_rec = self.node.od["skytraq"]
 
         if nav_data.fix_mode == FixMode.NO_FIX:
-            skytraq_rec["fix_mode"] = FixMode.NO_FIX.value
+            skytraq_rec["fix_mode"].value = FixMode.NO_FIX.value
         else:
             # datetime from gps message
             ts = gps_datetime(nav_data.gps_week, nav_data.tow)
@@ -115,7 +120,6 @@ class GpsService(Service):
         self._skytraq_power_off()
         self._state = GpsState.ERROR
         logger.exception(error)
-        self._skytraq.stop()
 
     def _skytraq_power_on(self):
         logger.info("turning SkyTraq on")
