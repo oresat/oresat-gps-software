@@ -21,7 +21,7 @@ classifiers = [
 ]
 dependencies = [
     "oresat-configs",
-    "oresat-olaf>=3.0.0",
+    "oresat-olaf>=3.2.0",
     "pyserial",
 ]
 dynamic = ["version"]
