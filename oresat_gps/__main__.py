@@ -3,7 +3,6 @@
 import os
 
 from olaf import Gpio, app, olaf_run, olaf_setup, render_olaf_template, rest_api
-from oresat_configs import NodeId
 
 from . import __version__
 from .gps_service import GpsService
@@ -22,7 +21,7 @@ def main():
 
     path = os.path.dirname(os.path.abspath(__file__))
 
-    args, _ = olaf_setup(NodeId.GPS)
+    args, _ = olaf_setup("gps")
     mock_args = [i.lower() for i in args.mock_hw]
     mock_skytraq = "skytraq" in mock_args or "all" in mock_args
 
