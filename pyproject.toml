@@ -36,7 +36,7 @@ exclude = ["docs*"]
 "*" = ["*.html"]
 
 [tool.setuptools_scm]
-write_to = "olaf/_version.py"
+write_to = "oresat_gps/_version.py"
 
 [tool.black]
 line_length = 100

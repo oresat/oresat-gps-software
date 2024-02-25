@@ -147,5 +147,11 @@ debian/files
 bb.org-overlays/
 *.dtbo
 
-# temp eds
-*.tmp
+# Vim
+*.swp
+
+# MacOS
+.DS_Store
+
+# setuptools-scm
+_version.py
