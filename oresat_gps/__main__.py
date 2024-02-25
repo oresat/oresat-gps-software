@@ -25,9 +25,8 @@ def main():
     mock_skytraq = "skytraq" in mock_args or "all" in mock_args
 
     app.od["versions"]["sw_version"].value = __version__
-    hw_version = app.od["versions"]["hw_version"].value
 
-    app.add_service(GpsService(hw_version, mock_skytraq))
+    app.add_service(GpsService(app.node, mock_skytraq))
 
     rest_api.add_template(f"{path}/templates/skytraq.html")
 

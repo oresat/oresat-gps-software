@@ -10,7 +10,7 @@ from os import geteuid
 from time import CLOCK_REALTIME, clock_settime
 
 import canopen
-from olaf import Gpio, NetworkError, Service, logger
+from olaf import Gpio, NetworkError, Service, logger, Node
 
 from .skytraq import FixMode, SkyTraq, SkyTraqError, gps_datetime
 
@@ -27,15 +27,15 @@ class GpsState(IntEnum):
 class GpsService(Service):
     """GPS SkyTraq Service."""
 
-    def __init__(self, hw_version: str, mock_hw: bool = False):
+    def __init__(self, node: Node, mock_hw: bool = False):
         super().__init__()
 
         self._skytraq = SkyTraq("/dev/ttyS2", mock_hw)
-        self.hw_version = hw_version
-        if hw_version == "1.0":
+        self._hw_version_obj = node.od["versions"]["hw_version"]
+        if self._hw_version_obj.value == "1.0":
             self._gpio_skytraq = Gpio("STQ_EN", mock_hw)
             self._gpio_lna = Gpio("MAX_EN", mock_hw)
-        elif hw_version == "1.1":
+        elif self._hw_version_obj.value == "1.1":
             self._gpio_en = Gpio("GPS_EN", mock_hw)
 
         self._state = GpsState.OFF
@@ -126,10 +126,10 @@ class GpsService(Service):
 
     def _skytraq_power_on(self):
         logger.info("turning SkyTraq on")
-        if self.hw_version == "1.0":
+        if self._hw_version_obj.value == "1.0":
             self._gpio_skytraq.high()
             self._gpio_lna.high()
-        elif self.hw_version == "1.1":
+        elif self._hw_version_obj.value == "1.1":
             self._gpio_en.high()
         self._skytraq.connect()
         self._state = GpsState.SEARCHING
@@ -137,9 +137,9 @@ class GpsService(Service):
     def _skytraq_power_off(self):
         logger.info("turning SkyTraq off")
         self._skytraq.disconnect()
-        if self.hw_version == "1.0":
+        if self._hw_version_obj.value == "1.0":
             self._gpio_lna.low()
             self._gpio_skytraq.low()
-        elif self.hw_version == "1.1":
+        elif self._hw_version_obj.value == "1.1":
             self._gpio_en.low()
         self._state = GpsState.OFF
