@@ -10,7 +10,7 @@ from os import geteuid
 from time import CLOCK_REALTIME, clock_settime
 
 import canopen
-from olaf import Gpio, NetworkError, Service, logger, Node
+from olaf import Gpio, NetworkError, Node, Service, logger
 
 from .skytraq import FixMode, SkyTraq, SkyTraqError, gps_datetime
 
