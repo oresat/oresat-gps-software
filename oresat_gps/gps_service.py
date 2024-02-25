@@ -27,12 +27,16 @@ class GpsState(IntEnum):
 class GpsService(Service):
     """GPS SkyTraq Service."""
 
-    def __init__(self, skytraq: SkyTraq, gpio_lna: Gpio, gpio_skytraq: Gpio):
+    def __init__(self, hw_version: str, mock_hw: bool = False):
         super().__init__()
 
-        self._gpio_skytraq = gpio_skytraq
-        self._gpio_lna = gpio_lna
-        self._skytraq = skytraq
+        self._skytraq = SkyTraq("/dev/ttyS2", mock_hw)
+        self.hw_version = hw_version
+        if hw_version == "1.0":
+            self._gpio_skytraq = Gpio("STQ_EN", mock_hw)
+            self._gpio_lna = Gpio("MAX_EN", mock_hw)
+        elif hw_version == "1.1":
+            self._gpio_en = Gpio("GPS_EN", mock_hw)
 
         self._state = GpsState.OFF
 
@@ -89,10 +93,10 @@ class GpsService(Service):
                 self.is_syncd_obj.value = True
 
             # add all skytraq data to OD
-            for i in nav_data._asdict().keys():
-                if i == "message_id":
+            for key, value in nav_data._asdict().items():
+                if key == "message_id":
                     continue
-                skytraq_rec[i].value = nav_data._asdict()[i]
+                skytraq_rec[key].value = value
 
             dt = datetime.fromtimestamp(ts)
             ms_since_midnight = (((((dt.hour * 60) + dt.minute) * 60) + dt.second) * 1000) + (
@@ -122,14 +126,20 @@ class GpsService(Service):
 
     def _skytraq_power_on(self):
         logger.info("turning SkyTraq on")
-        self._gpio_skytraq.high()
-        self._gpio_lna.high()
+        if self.hw_version == "1.0":
+            self._gpio_skytraq.high()
+            self._gpio_lna.high()
+        elif self.hw_version == "1.1":
+            self._gpio_en.high()
         self._skytraq.connect()
         self._state = GpsState.SEARCHING
 
     def _skytraq_power_off(self):
         logger.info("turning SkyTraq off")
         self._skytraq.disconnect()
-        self._gpio_lna.low()
-        self._gpio_skytraq.low()
+        if self.hw_version == "1.0":
+            self._gpio_lna.low()
+            self._gpio_skytraq.low()
+        elif self.hw_version == "1.1":
+            self._gpio_en.low()
         self._state = GpsState.OFF
