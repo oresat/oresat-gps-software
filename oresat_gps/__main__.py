@@ -25,7 +25,6 @@ def main():
     mock_skytraq = "skytraq" in mock_args or "all" in mock_args
 
     app.od["versions"]["sw_version"].value = __version__
-    hw_version = app.od["versions"]["hw_version"].value
 
     app.add_service(GpsService(app.node, mock_skytraq))
 
