@@ -27,7 +27,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.scripts]
-oresat-c3 = "oresat_gps.__main__:main"
+oresat-gps = "oresat_gps.__main__:main"
 
 [tool.setuptools.packages.find]
 exclude = ["docs*"]
