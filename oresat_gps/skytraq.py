@@ -158,7 +158,7 @@ class SkyTraq:
 
         return payload_bytes
 
-    def read(self) -> (NavData, bytes):
+    def read(self) -> tuple[NavData, bytes]:
         """Read the stream of messages from the skytraq."""
 
         payload = self._read()
