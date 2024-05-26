@@ -74,11 +74,14 @@ class GpsService(Service):
             return  # do nothing
 
         try:
-            nav_data = self._skytraq.read()
-        except SkyTraqError:
-            return
+            nav_data, raw = self._skytraq.read()
+        except SkyTraqError as e:
+            logger.debug(e)
 
         skytraq_rec = self.node.od["skytraq"]
+
+        skytraq_rec["packet_count"].value += 1
+        skytraq_rec["last_packet"].value = raw
 
         if nav_data.fix_mode == FixMode.NO_FIX:
             skytraq_rec["fix_mode"].value = FixMode.NO_FIX.value

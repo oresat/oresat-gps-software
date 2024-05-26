@@ -158,7 +158,7 @@ class SkyTraq:
 
         return payload_bytes
 
-    def read(self) -> NavData:
+    def read(self) -> (NavData, bytes):
         """Read the stream of messages from the skytraq."""
 
         payload = self._read()
@@ -168,7 +168,7 @@ class SkyTraq:
         except (struct.error, TypeError) as e:
             raise SkyTraqError(e)
 
-        return nav_data
+        return nav_data, payload
 
     def connect(self):
         """Connect to the skytraq serial bus."""
