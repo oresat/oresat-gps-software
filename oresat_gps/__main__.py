@@ -1,36 +1,58 @@
-"""GPS OLAF app main"""
+import logging
+from argparse import ArgumentParser
 
-import os
+from oresat_cand import NodeClient
 
-from olaf import app, olaf_run, olaf_setup, render_olaf_template, rest_api
-
-from . import __version__
-from .gps_service import GpsService
+from .gen.gps_od import GpsEntry
+from .gps import Gps
 
 
-@rest_api.app.route("/skytraq")
-def skytraq_template():
-    """Render skytraq webpage."""
-
-    return render_olaf_template("skytraq.html", name="SkyTraq")
+def get_hw_version() -> str:
+    version = ""
+    try:
+        with open("/sys/bus/i2c/devices/0-0050/eeprom", "rb") as f:
+            raw = f.read(28)
+            version = raw[12:16].decode()
+            version = f"{int(version[:2])}.{int(version[2:])}"
+    except Exception:
+        logging.critical("failed to read hardware version from eeprom")
+    return version
 
 
 def main():
-    """GPS OLAF app main"""
+    parser = ArgumentParser()
+    parser.add_argument("-s", "--serial", default="/dev/ttyS2", help="serial port path")
+    parser.add_argument(
+        "-w",
+        "--hardware-version",
+        choices=Gps.SUPPORTED_HW_VERSIONS,
+        default="",
+        help="will detect if not set",
+    )
+    parser.add_argument("-m", "--mock-hw", action="store_true", help="mock hardware")
+    parser.add_argument("-v", "--verbose", action="store_true", help="verbose logging")
+    args = parser.parse_args()
 
-    path = os.path.dirname(os.path.abspath(__file__))
+    LOG_FMT = "%(levelname)s: %(filename)s:%(lineno)s - %(message)s"
+    logging.basicConfig(format=LOG_FMT)
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+    else:
+        logging.getLogger().setLevel(logging.INFO)
 
-    args, _ = olaf_setup("gps")
-    mock_args = [i.lower() for i in args.mock_hw]
-    mock_skytraq = "skytraq" in mock_args or "all" in mock_args
+    hw_version = args.hardware_version
+    if args.hardware_version and not args.mock_hw:
+        get_hw_version()
 
-    app.od["versions"]["sw_version"].value = __version__
+    node = NodeClient(GpsEntry)
+    gps = Gps(hw_version, args.serial, node, args.mock_hw)
 
-    app.add_service(GpsService(app.node, mock_skytraq))
+    try:
+        gps.run()
+    except KeyboardInterrupt:
+        pass
 
-    rest_api.add_template(f"{path}/templates/skytraq.html")
-
-    olaf_run()
+    gps.stop()
 
 
 if __name__ == "__main__":

@@ -1,8 +1,0 @@
-black
-build
-isort
-oresat-olaf>=3.3.1
-pylama
-pyserial
-setuptools
-setuptools-scm

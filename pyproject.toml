@@ -4,64 +4,39 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "oresat-gps"
-description = "OreSat GPS OLAF app"
+description = "OreSat GPS app"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 license = {text = "GPL-3.0"}
 classifiers = [
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Embedded Systems",
 ]
 dependencies = [
-    "oresat-configs",
-    "oresat-olaf>=3.2.0",
+    "gpiod",
+    "oresat-cand",
     "pyserial",
 ]
 dynamic = ["version"]
 
+[project.optional-dependencies]
+dev = [
+    "oresat-configs",
+    "ruff",
+]
+
 [project.scripts]
 oresat-gps = "oresat_gps.__main__:main"
 
-[tool.setuptools.packages.find]
-exclude = ["docs*"]
-
-[tool.setuptools.package-data]
-"*" = ["*.html"]
-
 [tool.setuptools_scm]
-write_to = "oresat_gps/_version.py"
+version_file = "oresat_gps/_version.py"
 
-[tool.black]
-line_length = 100
-
-[tool.pylama]
-format = "pylint"
-skip = "*/.tox/*,*/.env/,*/.git/*,*/.github/*,*/build/*"
-linters = "pycodestyle,pyflakes,pylint,mccabe,mypy,radon"
-# C0103:    Arguments are not snake_case naming style or too short
-# E203:     Whitespace before ':' (black does this)
-# W0613:    Unused argument
-# R0902:    Too many instance attributes
-# R901:     Too complex
-# R0913:    Too many arguments
-# R0914:    Too many local variables
-# W1514:    Using open without explicitly specifying an encoding
-# W0707:    Consider explicitly re-raising
-# C901:     Function is too complex
-ignore = "C0103,E203,W0613,R0902,R901,R0913,R0914,W1514,W0707,C901"
-max_line_length = 100
-
-[[tool.mypy.overrides]]
-module = "canopen,olaf,serial,oresat_configs"
-ignore_missing_imports = true
-
-[tool.isort]
-profile = "black"
-line_length = 100
+[tool.ruff]
+line-length = 100

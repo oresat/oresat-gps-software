@@ -1,0 +1,231 @@
+name: gps
+nice_name: GPS
+
+std_objects:
+  - scet
+
+objects:
+  - index: 0x4000
+    name: status
+    data_type: uint8
+    value_descriptions:
+      'off': 0
+      searching: 1
+      locked: 2
+      error: 0xFF
+    access_type: ro
+
+  - index: 0x4001
+    name: time_syncd
+    data_type: bool
+    description: system time has syncd to gps time
+    access_type: ro
+
+  - index: 0x4002
+    name: skytraq
+    object_type: record
+    subindexes:
+      - subindex: 0x1
+        name: fix_mode
+        data_type: uint8
+        value_descriptions:
+          no_fix: 0
+          fix_2d: 1
+          fix_3d: 2
+          fix_3d_dgps: 3
+        access_type: ro
+
+      - subindex: 0x2
+        name: number_of_sv
+        data_type: uint8
+        description: number of gps satellites locked onto
+        access_type: ro
+        high_limit: 12
+
+      - subindex: 0x3
+        name: gps_week
+        data_type: uint16
+        description: gps week number
+        access_type: ro
+        high_limit: 1023
+
+      - subindex: 0x4
+        name: tow
+        data_type: uint32
+        description: time of the week
+        access_type: ro
+        scale_factor: 0.01
+        unit: s
+        high_limit: 60480000
+
+      - subindex: 0x5
+        name: latitude
+        data_type: int32
+        description: latitude
+        access_type: ro
+        scale_factor: 1.0e-7
+        unit: deg
+        low_limit: -900000000
+        high_limit: 900000000
+
+      - subindex: 0x6
+        name: longitude
+        data_type: int32
+        description: longitude
+        access_type: ro
+        scale_factor: 1.0e-7
+        unit: deg
+        low_limit: -1800000000
+        high_limit: 1800000000
+
+      - subindex: 0x7
+        name: ellipsoid_alt
+        data_type: uint32
+        description: height above ellipsoid
+        access_type: ro
+        unit: km
+        scale_factor: 0.00001  # cm to km
+
+      - subindex: 0x8
+        name: mean_sea_lvl_alt
+        data_type: uint32
+        description: mean sea level
+        access_type: ro
+        unit: km
+        scale_factor: 0.00001  # cm to km
+
+      - subindex: 0x9
+        name: gdop
+        data_type: uint16
+        description: geometric diluttion of precision
+        access_type: ro
+        scale_factor: 0.01
+
+      - subindex: 0xa
+        name: pdop
+        data_type: uint16
+        description: position diluttion of precision
+        access_type: ro
+        scale_factor: 0.01
+
+      - subindex: 0xb
+        name: hdop
+        data_type: uint16
+        description: height diluttion of precision
+        access_type: ro
+        scale_factor: 0.01
+
+      - subindex: 0xc
+        name: vdop
+        data_type: uint16
+        description: vertical diluttion of precision
+        access_type: ro
+        scale_factor: 0.01
+
+      - subindex: 0xd
+        name: tdop
+        data_type: uint16
+        description: time diluttion of precision
+        access_type: ro
+        scale_factor: 0.01
+
+      - subindex: 0xe
+        name: ecef_x
+        data_type: int32
+        description: ecef x coordinate
+        access_type: ro
+        unit: km
+        scale_factor: 0.00001  # cm to km
+
+      - subindex: 0xf
+        name: ecef_y
+        data_type: int32
+        description: ecef y coordinate
+        access_type: ro
+        unit: km
+        scale_factor: 0.00001  # cm to km
+
+      - subindex: 0x10
+        name: ecef_z
+        data_type: int32
+        description: ecef z coordinate
+        access_type: ro
+        unit: km
+        scale_factor: 0.00001  # cm to km
+
+      - subindex: 0x11
+        name: ecef_vx
+        data_type: int32
+        description: ecef x velocity
+        access_type: ro
+        unit: km/s
+        scale_factor: 0.00001  # cm/s to km/s
+
+      - subindex: 0x12
+        name: ecef_vy
+        data_type: int32
+        description: ecef y velocity
+        access_type: ro
+        unit: km/s
+        scale_factor: 0.00001  # cm/s to km/s
+
+      - subindex: 0x13
+        name: ecef_vz
+        data_type: int32
+        description: ecef z velocity
+        access_type: ro
+        unit: km/s
+        scale_factor: 0.00001  # cm/s to km/s
+
+      - subindex: 0x14
+        name: time_since_midnight
+        data_type: uint32
+        description: time since midnight when the gps data was received
+        access_type: ro
+        unit: ms
+
+      - subindex: 0x15
+        name: packet_count
+        data_type: uint32
+        description: number of packet received since boot
+        access_type: ro
+
+      - subindex: 0x16
+        name: last_packet
+        data_type: domain
+        description: last packet received
+        access_type: ro
+
+tpdos:
+  - num: 3
+    fields:
+      - [skytraq, time_since_midnight]
+
+  - num: 4
+    fields:
+      - [skytraq, ecef_x]
+      - [skytraq, ecef_y]
+
+  - num: 5
+    fields:
+      - [skytraq, ecef_z]
+      - [skytraq, ecef_vx]
+
+  - num: 6
+    fields:
+      - [skytraq, ecef_vy]
+      - [skytraq, ecef_vz]
+
+  - num: 7
+    fields:
+      - [status]
+      - [skytraq, number_of_sv]
+      - [skytraq, fix_mode]
+      - [time_syncd]
+    event_timer_ms: 1000
+
+  - num: 16  # the time sync TPDO
+    fields:
+      - [scet]
+    sync: 1
+    cob_id: 0x181

@@ -8,6 +8,8 @@ from time import sleep
 
 from serial import Serial, SerialException
 
+SECONDS_IN_DAY = 86400
+
 SKYTRAQ_EPOCH = datetime(1980, 1, 5, tzinfo=timezone.utc)
 """SkyTraq's time epoch"""
 
@@ -72,7 +74,7 @@ def readline(ser: Serial, timeout: float) -> bytes:
 class SkyTraq:
     """SkyTraq serail driver"""
 
-    BINARY_MODE = b"\xA0\xA1\x00\x03\x09\x02\x00\x0B\x0D\x0A"
+    BINARY_MODE = b"\xa0\xa1\x00\x03\x09\x02\x00\x0b\x0d\x0a"
     """Command to swap to binary mode"""
 
     MOCK_DATA = (
@@ -192,13 +194,12 @@ class SkyTraq:
         return True
 
 
-def gps_datetime(gps_week: int, tow: int) -> float:
+def gps_time(gps_week: int, tow: int) -> float:
     """Get the unix time from GPS week and TOW (time of week)."""
 
     usec = tow % 100 * 1000
-    # 86400 is number of seconds in a day
-    sec = (tow / 100) % 86400
-    day = ((tow / 100) / 86400) + (gps_week * 7)
+    sec = (tow / 100) % SECONDS_IN_DAY
+    day = ((tow / 100) / SECONDS_IN_DAY) + (gps_week * 7)
     dt = SKYTRAQ_EPOCH + timedelta(days=day, seconds=sec, microseconds=usec)
 
     return dt.timestamp()
