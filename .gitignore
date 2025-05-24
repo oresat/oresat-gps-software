@@ -158,3 +158,4 @@ _version.py
 
 # Generated files
 */gen/
+*.dbc

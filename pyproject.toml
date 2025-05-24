@@ -35,6 +35,9 @@ dev = [
 [project.scripts]
 oresat-gps = "oresat_gps.__main__:main"
 
+[tool.setuptools.package-data]
+"*" = ["*.csv"]
+
 [tool.setuptools_scm]
 version_file = "oresat_gps/_version.py"
 
