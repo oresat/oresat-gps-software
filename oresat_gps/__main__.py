@@ -1,5 +1,6 @@
 import logging
 from argparse import ArgumentParser
+from pathlib import Path
 
 from oresat_cand import NodeClient
 
@@ -44,7 +45,8 @@ def main():
     if args.hardware_version and not args.mock_hw:
         get_hw_version()
 
-    node = NodeClient(GpsEntry)
+    od_config_path = Path(__file__).parent / "gen/od.csv"
+    node = NodeClient(GpsEntry, od_config_path=od_config_path)
     gps = Gps(hw_version, args.serial, node, args.mock_hw)
 
     try:
