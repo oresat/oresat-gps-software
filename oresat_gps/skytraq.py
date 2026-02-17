@@ -6,11 +6,15 @@ from functools import reduce
 from operator import xor
 from pathlib import Path
 from time import sleep
-from typing import NamedTuple
+from typing import NamedTuple, Union
 
 from olaf import Gpio
 from serial import Serial, SerialException
 
+BINARY_START: bytes = b'\xA0\xA1'
+"""SkyTraq binary message start bytes"""
+BINARY_END: bytes = b'\x0D\x0A'
+"""SkyTraq binary message end bytes"""
 
 class NavData(NamedTuple):
     '''Raw Navigation data returned from a SkyTraq.'''
@@ -126,6 +130,49 @@ class SkyTraq:
             raise SkyTraqError("Error unpacking payload") from e
 
         return nav_data, payload_bytes
+
+    @staticmethod
+    def encode_binary(message_id: int, body: Union[bytes, str]) -> bytes:
+        """
+        Encode a message ID and body into a SkyTraq binary message.
+
+        Parameters
+        ----------
+        message_id
+            The message ID.
+        body
+            The message body. Can be a bytestring or hex string
+
+        Returns
+        -------
+        bytes
+            The encoded message.
+
+        Raises
+        ------
+        OverflowError
+            If message_id > 1 byte or body > 65534 bytes. SkyTraq limits total
+            payload size to 65535 bytes (id + body).
+        """
+        if type(body) is str:
+            if body.startswith("0x"):
+                body = body.split("0x")[1]
+            num: int = int(body, 16)
+            byte_length: int = len(body) // 2
+            body = num.to_bytes(byte_length)
+
+        msg_bytes: bytes = message_id.to_bytes(1)
+        payload_length: bytes = (1 + len(body)).to_bytes(2)
+        payload_bytes: bytearray = bytearray(msg_bytes)
+        payload_bytes.extend(body)
+        # checksum gen
+        cs: int = 0
+        for n in payload_bytes:
+            cs ^= n
+        # <0xA0,0xA1><PL><Message ID><Message Body><CS><0x0D,0x0A>
+        payload_bytes[0:0] = BINARY_START + payload_length
+        payload_bytes.extend(cs.to_bytes() + BINARY_END)
+        return bytes(payload_bytes)
 
     def connect(self) -> None:
         """Connect to the skytraq serial bus."""
