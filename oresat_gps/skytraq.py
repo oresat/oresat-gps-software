@@ -1,50 +1,53 @@
-"""SkyTraq serail driver"""
+"""SkyTraq serial driver."""
 
 import struct
-from collections import namedtuple
 from datetime import datetime, timedelta, timezone
-from enum import IntEnum
+from enum import Enum, unique
+from pathlib import Path
 from time import sleep
+from typing import NamedTuple
 
+from olaf import Gpio
 from serial import Serial, SerialException
 
+# FIXME: This doesn't seem right - GPS epoch is 1980-1-6 but also the timezone
+# is utc + 16s because utc has leap seconds. Does skytraq do something different?
 SKYTRAQ_EPOCH = datetime(1980, 1, 5, tzinfo=timezone.utc)
 """SkyTraq's time epoch"""
 
 
-NavData = namedtuple(
-    "NavData",
-    [
-        "message_id",
-        "fix_mode",
-        "number_of_sv",
-        "gps_week",
-        "tow",
-        "latitude",
-        "longitude",
-        "ellipsoid_alt",
-        "mean_sea_lvl_alt",
-        "gdop",
-        "pdop",
-        "hdop",
-        "vdop",
-        "tdop",
-        "ecef_x",
-        "ecef_y",
-        "ecef_z",
-        "ecef_vx",
-        "ecef_vy",
-        "ecef_vz",
-    ],
-)
+class NavData(NamedTuple):
+    '''Raw Navigation data returned from a SkyTraq.'''
+
+    message_id: int
+    fix_mode: int
+    number_of_sv: int
+    gps_week: int
+    tow: int
+    latitude: int
+    longitude: int
+    ellipsoid_alt: int
+    mean_sea_lvl_alt: int
+    gdop: int
+    pdop: int
+    hdop: int
+    vdop: int
+    tdop: int
+    ecef_x: int
+    ecef_y: int
+    ecef_z: int
+    ecef_vx: int
+    ecef_vy: int
+    ecef_vz: int
 
 
 class SkyTraqError(Exception):
-    """An error occured with the SkyTraq"""
+    """An error occurred with the SkyTraq."""
 
 
-class FixMode(IntEnum):
-    """Quality of fix"""
+@unique
+class FixMode(Enum):
+    """Quality of fix."""
 
     NO_FIX = 0
     FIX_2D = 1
@@ -52,57 +55,27 @@ class FixMode(IntEnum):
     FIX_3D_DGPS = 3
 
 
-def readline(ser: Serial, timeout: float) -> bytes:
-    """Read from serial bus."""
-
-    line = bytearray()
-
-    while True:
-        c = ser.read(timeout)
-        if c:
-            line += c
-            if line[-2:] == b"\r\n":
-                break
-        else:
-            break
-
-    return bytes(line)
-
-
 class SkyTraq:
-    """SkyTraq serail driver"""
+    """SkyTraq serail driver."""
 
-    BINARY_MODE = b"\xA0\xA1\x00\x03\x09\x02\x00\x0B\x0D\x0A"
+    BINARY_MODE = b"\xa0\xa1\x00\x03\x09\x02\x00\x0b\x0d\x0a"
     """Command to swap to binary mode"""
-
-    MOCK_DATA = (
-        b"\xa0\xa1\x00\x3b\xa8\x02\x07\x08\x6a\x03\x21\x7a\x1f\x1b\x1f\x16\xf1\xb6\xe1"
-        b"\x3c\x1c\x00\x00\x0f\x6f\x00\x00\x17\xb7\x01\x0d\x00\xe4\x00\x7e\x00\xbd\x00"
-        b"\x8f\xf1\x97\x18\xd2\xe9\x88\x7d\x90\x1a\xfb\x26\xf7\x00\x00\x00\x00\x00\x00"
-        b"\x00\x00\x00\x00\x00\x00\x68\x0d\x0a"
-    )
-    """Mock binary line"""
 
     BAUD = 9600
     """Baud rate of skytraq"""
 
-    def __init__(self, port: str, mock: bool = False):
-        """
+    def __init__(self, port: Path) -> None:
+        """Create a SkyTraq instance associated with a specific serial port.
+
         Paramters
         ---------
         port: str
             Serial port to use.
-        mock: str
-            option to mocking the skytraq.
         """
-
         self._port = port
-        self._mock = mock
-        self._ser: Serial = None
 
     def _read(self) -> bytes:
-        """
-        Read from skytraq serial bus.
+        r"""Read from skytraq serial bus.
 
         format:
             [0xA0A1][PL][ID][P][CS][\r\n]
@@ -121,31 +94,29 @@ class SkyTraq:
         bytes
             The bytes from the body. The first byte is the message the rest are the payload bytes.
         """
-
-        if self._mock:
-            line = self.MOCK_DATA
-            sleep(0.5)
-        else:
-            try:
-                line = readline(self._ser, 1)
-            except SerialException as e:
-                raise SkyTraqError(e)
+        try:
+            line = self._ser.readline()
+        except SerialException as e:
+            raise SkyTraqError("Error reading GPS line") from e
         if not line:
             raise SkyTraqError("skytraq read serial failed")
+        return line
 
-        line_len = len(line)
-        if line_len <= 7:
+    def read(self) -> tuple[NavData, bytes]:
+        """Read the stream of messages from the skytraq."""
+        line = self._read()
+        if len(line) <= 7:
             raise SkyTraqError("skytraq message length is too short")
 
-        payload_len_bytes = line[2 : (line_len - 4) * -1]
+        payload_len_bytes = line[2 : (len(line) - 4) * -1]
         payload_bytes = line[4:-3]
         checksum_byte = line[-3]
 
         # validate payload length in line
         try:
             pl = struct.unpack(">H", payload_len_bytes)[0]
-        except struct.error:
-            raise SkyTraqError("skytraq payload length unpack failed")
+        except struct.error as e:
+            raise SkyTraqError("skytraq payload length unpack failed") from e
         if len(payload_bytes) != pl:
             raise SkyTraqError(f"payload length does not match {len(payload_bytes)} vs {pl}")
 
@@ -156,45 +127,93 @@ class SkyTraq:
         if cs != checksum_byte:
             raise SkyTraqError("invalid checksum")
 
-        return payload_bytes
-
-    def read(self) -> tuple[NavData, bytes]:
-        """Read the stream of messages from the skytraq."""
-
-        payload = self._read()
         try:
-            data = struct.unpack(">3BHI2i2I5H6i", payload)
-            nav_data = NavData(*data)
+            nav_data = NavData(*struct.unpack(">3BHI2i2I5H6i", payload_bytes))
         except (struct.error, TypeError) as e:
-            raise SkyTraqError(e)
+            raise SkyTraqError("Error unpacking payload") from e
 
-        return nav_data, payload
+        return nav_data, payload_bytes
 
-    def connect(self):
+    def connect(self) -> None:
         """Connect to the skytraq serial bus."""
+        self._ser = Serial(str(self._port), self.BAUD, timeout=1)
+        self._ser.write(self.BINARY_MODE)  # swap to binary mode
 
-        if not self._mock:
-            self._ser = Serial(self._port, self.BAUD, timeout=1)
-            self._ser.write(self.BINARY_MODE)  # swap to binary mode
-
-    def disconnect(self):
+    def disconnect(self) -> None:
         """Disconnect from the skytraq serial bus."""
-
-        if not self._mock:
-            self._ser.close()
+        self._ser.close()
 
     @property
-    def is_conencted(self) -> bool:
-        """Status of the cconnection to the skytraq serial bus."""
+    def is_connected(self) -> bool:
+        """Status of the connection to the skytraq serial bus."""
+        return self._ser.is_open
 
-        if not self._mock:
-            return self._ser.is_open
-        return True
+
+class SkyTraq10(SkyTraq):
+    '''SkyTraq driver for the GPS 1.0 series boards.'''
+
+    def __init__(self, path: Path) -> None:
+        super().__init__(path)
+        self._enable = Gpio("STQ_EN")
+        self._lna = Gpio("MAX_EN")
+
+    def connect(self) -> None:
+        self._enable.high()
+        self._lna.high()
+        super().connect()
+
+    def disconnect(self) -> None:
+        super().disconnect()
+        self._lna.low()
+        self._enable.low()
+
+
+class SkyTraq11(SkyTraq):
+    '''SkyTraq driver for the GPS 1.1 series boards.'''
+
+    def __init__(self, path: Path) -> None:
+        super().__init__(path)
+        self._enable = Gpio("GPS_EN")
+
+    def connect(self) -> None:
+        self._enable.high()
+        super().connect()
+
+    def disconnect(self) -> None:
+        super().disconnect()
+        self._enable.low()
+
+
+class MockSkyTraq(SkyTraq):
+    '''A simulated SkyTraq driver that doesn't touch any physical hardware.'''
+
+    MOCK_DATA = (
+        b"\xa0\xa1\x00\x3b\xa8\x02\x07\x08\x6a\x03\x21\x7a\x1f\x1b\x1f\x16\xf1\xb6\xe1"
+        b"\x3c\x1c\x00\x00\x0f\x6f\x00\x00\x17\xb7\x01\x0d\x00\xe4\x00\x7e\x00\xbd\x00"
+        b"\x8f\xf1\x97\x18\xd2\xe9\x88\x7d\x90\x1a\xfb\x26\xf7\x00\x00\x00\x00\x00\x00"
+        b"\x00\x00\x00\x00\x00\x00\x68\x0d\x0a"
+    )
+
+    def __init__(self) -> None:
+        self._connected = False
+
+    def _read(self) -> bytes:
+        sleep(0.5)
+        return self.MOCK_DATA
+
+    def connect(self) -> None:
+        self._connected = True
+
+    def disconnect(self) -> None:
+        self._connected = False
+
+    @property
+    def is_connected(self) -> bool:
+        return self._connected
 
 
 def gps_datetime(gps_week: int, tow: int) -> float:
     """Get the unix time from GPS week and TOW (time of week)."""
-
     usec = tow % 100 * 1000
     # 86400 is number of seconds in a day
     sec = (tow / 100) % 86400
