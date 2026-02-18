@@ -20,7 +20,7 @@ dependencies = [
 ]
 dynamic = ["version"]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "build",
     "ruff",
