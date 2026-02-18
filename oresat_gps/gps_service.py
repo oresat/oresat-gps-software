@@ -3,14 +3,14 @@
 Reads the GPS data stream from SkyTraq and puts the data into the OD.
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from enum import Enum, unique
 from os import geteuid
 from time import CLOCK_REALTIME, clock_settime
 
 from olaf import NetworkError, Service, logger
 
-from .skytraq import FixMode, SkyTraq, SkyTraqError, gps_datetime
+from .skytraq import FixMode, SkyTraq, SkyTraqError
 
 
 @unique
@@ -74,12 +74,21 @@ class GpsService(Service):
         if nav_data.fix_mode == FixMode.NO_FIX.value:
             skytraq_rec["fix_mode"].value = FixMode.NO_FIX.value
         else:
-            # datetime from gps message
-            ts = gps_datetime(nav_data.gps_week, nav_data.tow)
+            # GPS time is weeks and seconds since midnight 1980-1-6 (with the skytraq tow field
+            # being centiseconds, see AN0037 Navigation Data Message), except that UTC suffers from
+            # leap seconds sporadically so we have to also add all of them that occurred since the
+            # epoch to the gps time.
+            gps_epoch = datetime(1980, 1, 6, tzinfo=timezone.utc)
+            # Leap seconds as of 2026-02-18, update as needed. FIXME: how to determine
+            # automatically?
+            leap_seconds = 18
+            dt = gps_epoch + timedelta(
+                weeks=nav_data.gps_week, seconds=leap_seconds, milliseconds=nav_data.tow * 10
+            )
 
             # sync clock if it hasn't been syncd yet
             if not self.is_syncd_obj.value and geteuid() == 0:
-                clock_settime(CLOCK_REALTIME, ts)
+                clock_settime(CLOCK_REALTIME, dt.timestamp())
                 logger.info("set time based off of skytraq time")
                 self.is_syncd_obj.value = True
 
@@ -89,7 +98,6 @@ class GpsService(Service):
                     continue
                 skytraq_rec[key].value = value
 
-            dt = datetime.fromtimestamp(ts, tz=timezone.utc)
             ms_since_midnight = (((((dt.hour * 60) + dt.minute) * 60) + dt.second) * 1000) + (
                 dt.microsecond // 1000
             )

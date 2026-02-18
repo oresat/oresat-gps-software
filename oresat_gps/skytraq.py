@@ -1,7 +1,6 @@
 """SkyTraq serial driver."""
 
 import struct
-from datetime import datetime, timedelta, timezone
 from enum import Enum, unique
 from functools import reduce
 from operator import xor
@@ -11,11 +10,6 @@ from typing import NamedTuple
 
 from olaf import Gpio
 from serial import Serial, SerialException
-
-# FIXME: This doesn't seem right - GPS epoch is 1980-1-6 but also the timezone
-# is utc + 16s because utc has leap seconds. Does skytraq do something different?
-SKYTRAQ_EPOCH = datetime(1980, 1, 5, tzinfo=timezone.utc)
-"""SkyTraq's time epoch"""
 
 
 class NavData(NamedTuple):
@@ -212,14 +206,3 @@ class MockSkyTraq(SkyTraq):
     @property
     def is_connected(self) -> bool:
         return self._connected
-
-
-def gps_datetime(gps_week: int, tow: int) -> float:
-    """Get the unix time from GPS week and TOW (time of week)."""
-    usec = tow % 100 * 1000
-    # 86400 is number of seconds in a day
-    sec = (tow / 100) % 86400
-    day = ((tow / 100) / 86400) + (gps_week * 7)
-    dt = SKYTRAQ_EPOCH + timedelta(days=day, seconds=sec, microseconds=usec)
-
-    return dt.timestamp()
