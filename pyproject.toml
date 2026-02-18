@@ -6,25 +6,29 @@ build-backend = "setuptools.build_meta"
 name = "oresat-gps"
 description = "OreSat GPS OLAF app"
 readme = "README.md"
-requires-python = ">=3.7"
-license = {text = "GPL-3.0"}
+requires-python = ">=3.10"
+license = "GPL-3.0-or-later"
 classifiers = [
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Topic :: Software Development :: Embedded Systems",
 ]
 dependencies = [
-    "oresat-configs",
-    "oresat-olaf>=3.2.0",
+    "oresat-olaf>=3.6.5",
     "pyserial",
 ]
 dynamic = ["version"]
+
+[project.optional-dependencies]
+dev = [
+    "build",
+    "ruff",
+    "mypy",
+    "types-pyserial",
+    "pytest",
+    "pytest-cov",
+]
 
 [project.scripts]
 oresat-gps = "oresat_gps.__main__:main"
@@ -38,30 +42,41 @@ exclude = ["docs*"]
 [tool.setuptools_scm]
 write_to = "oresat_gps/_version.py"
 
-[tool.black]
-line_length = 100
+[tool.ruff]
+line-length = 100
 
-[tool.pylama]
-format = "pylint"
-skip = "*/.tox/*,*/.env/,*/.git/*,*/.github/*,*/build/*"
-linters = "pycodestyle,pyflakes,pylint,mccabe,mypy,radon"
-# C0103:    Arguments are not snake_case naming style or too short
-# E203:     Whitespace before ':' (black does this)
-# W0613:    Unused argument
-# R0902:    Too many instance attributes
-# R901:     Too complex
-# R0913:    Too many arguments
-# R0914:    Too many local variables
-# W1514:    Using open without explicitly specifying an encoding
-# W0707:    Consider explicitly re-raising
-# C901:     Function is too complex
-ignore = "C0103,E203,W0613,R0902,R901,R0913,R0914,W1514,W0707,C901"
-max_line_length = 100
+[tool.ruff.format]
+quote-style = "preserve"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    # D203 and D213 conflict with D211 and D212. Prefer the latter which follow
+    # PEP257
+    "D203",
+    "D213",
+    # Conflicts with formatter
+    "COM812", # missing-trailing-comma
+    # Stylistic choices for quote-style = preserve
+    "Q000",  # Single quotes found but double quotes preferred
+    "Q002",  # Single quote docstring found but double quotes preferred
+    "D300",  # Use triple double quotes
+    # FIXME: These should be turned back on but take effort
+    "D102",  # Missing docstring in public method
+    "D107",  # Missing docstring in `__init__`
+    # These are the opposite of what I want
+    "D413",  # Missing blank line after last section
+    "EM101", # Exception must not use a string literal
+    "EM102", # Exception must not use an f-string literal
+    "FIX",  # flake8-fixme
+    "TD",  # flake8-todos
+    # This might be good to turn on later, right now I'm on the fence about it
+    "TRY003",  # Avoid specifying long messages outside the exception class
+    # Another one that might be good later but for now is too argessive. Many of
+    # the numbers it flags are obvious from context.
+    "PLR2004",  # Magic value used in comparison
+]
 
 [[tool.mypy.overrides]]
-module = "canopen,olaf,serial,oresat_configs"
+module = "olaf"
 ignore_missing_imports = true
-
-[tool.isort]
-profile = "black"
-line_length = 100

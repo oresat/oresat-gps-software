@@ -11,7 +11,7 @@ Framework), which it built ontop of [CANopen for Python]. See the
 Install dependenies
 
 ```bash
-$ pip3 install -r requirements.txt
+$ pip3 install .[dev]
 ```
 Make a virtual CAN bus
 
