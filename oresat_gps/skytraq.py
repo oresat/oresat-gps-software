@@ -3,6 +3,8 @@
 import struct
 from datetime import datetime, timedelta, timezone
 from enum import Enum, unique
+from functools import reduce
+from operator import xor
 from pathlib import Path
 from time import sleep
 from typing import NamedTuple
@@ -104,27 +106,24 @@ class SkyTraq:
 
     def read(self) -> tuple[NavData, bytes]:
         """Read the stream of messages from the skytraq."""
+        # See Application Note AN0037 for format
         line = self._read()
         if len(line) <= 7:
             raise SkyTraqError("skytraq message length is too short")
 
-        payload_len_bytes = line[2 : (len(line) - 4) * -1]
+        payload_len_bytes = line[2:4]
         payload_bytes = line[4:-3]
         checksum_byte = line[-3]
 
         # validate payload length in line
         try:
-            pl = struct.unpack(">H", payload_len_bytes)[0]
+            (pl,) = struct.unpack(">H", payload_len_bytes)
         except struct.error as e:
             raise SkyTraqError("skytraq payload length unpack failed") from e
         if len(payload_bytes) != pl:
             raise SkyTraqError(f"payload length does not match {len(payload_bytes)} vs {pl}")
 
-        # validate checksum
-        cs = 0
-        for i in payload_bytes:
-            cs ^= i
-        if cs != checksum_byte:
+        if reduce(xor, payload_bytes, 0) != checksum_byte:
             raise SkyTraqError("invalid checksum")
 
         try:
@@ -185,7 +184,10 @@ class SkyTraq11(SkyTraq):
 
 
 class MockSkyTraq(SkyTraq):
-    '''A simulated SkyTraq driver that doesn't touch any physical hardware.'''
+    '''A simulated SkyTraq driver that doesn't touch any physical hardware.
+
+    Returns only a message of type 0xA8 - Navigation Data Message.
+    '''
 
     MOCK_DATA = (
         b"\xa0\xa1\x00\x3b\xa8\x02\x07\x08\x6a\x03\x21\x7a\x1f\x1b\x1f\x16\xf1\xb6\xe1"
