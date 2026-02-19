@@ -6,10 +6,11 @@ from functools import reduce
 from operator import xor
 from pathlib import Path
 from time import sleep
-from typing import NamedTuple, Union
+from typing import Iterable, NamedTuple
 
 from olaf import Gpio
 from serial import Serial, SerialException
+
 
 class NavData(NamedTuple):
     '''Raw Navigation data returned from a SkyTraq.'''
@@ -131,20 +132,19 @@ class SkyTraq:
         return nav_data, payload_bytes
 
     @staticmethod
-    def checksum(payload: bytes) -> int:
+    def checksum(payload: Iterable[int]) -> int:
         return reduce(xor, payload, 0)
 
-    @staticmethod
-    def encode_binary(message_id: int, body: Union[bytes, str]) -> bytes:
-        """
-        Encode a message ID and body into a SkyTraq binary message.
+    @classmethod
+    def encode_binary(cls, message_id: int, body: bytes) -> bytes:
+        """Encode a message ID and body into a SkyTraq binary message.
 
         Parameters
         ----------
         message_id
             The message ID.
         body
-            The message body. Can be a bytestring or hex string
+            The message body.
 
         Returns
         -------
@@ -157,20 +157,14 @@ class SkyTraq:
             If message_id > 1 byte or body > 65534 bytes. SkyTraq limits total
             payload size to 65535 bytes (id + body).
         """
-        if type(body) is str:
-            if body.startswith("0x"):
-                body = body.split("0x")[1]
-            num: int = int(body, 16)
-            byte_length: int = len(body) // 2
-            body = num.to_bytes(byte_length)
-
-        msg_bytes: bytes = message_id.to_bytes(1)
-        payload_length: bytes = (1 + len(body)).to_bytes(2)
+        msg_bytes: bytes = message_id.to_bytes(1, byteorder="big")
+        payload_length: bytes = (1 + len(body)).to_bytes(2, byteorder="big")
         payload_bytes: bytearray = bytearray(msg_bytes)
-        payload_bytes.extend(body)
+        payload_bytes += body
+        cs: bytes = cls.checksum(payload_bytes).to_bytes(1, byteorder="big")
         # <0xA0,0xA1><PL><Message ID><Message Body><CS><0x0D,0x0A>
-        payload_bytes[0:0] = SkyTraq.BINARY_START + payload_length
-        payload_bytes.extend(SkyTraq.checksum(payload_bytes).to_bytes() + SkyTraq.BINARY_END)
+        payload_bytes[0:0] = cls.BINARY_START + payload_length
+        payload_bytes += cs + cls.BINARY_END
         return bytes(payload_bytes)
 
     def connect(self) -> None:
