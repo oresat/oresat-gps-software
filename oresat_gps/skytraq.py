@@ -11,11 +11,6 @@ from typing import NamedTuple, Union
 from olaf import Gpio
 from serial import Serial, SerialException
 
-BINARY_START: bytes = b'\xA0\xA1'
-"""SkyTraq binary message start bytes"""
-BINARY_END: bytes = b'\x0D\x0A'
-"""SkyTraq binary message end bytes"""
-
 class NavData(NamedTuple):
     '''Raw Navigation data returned from a SkyTraq.'''
 
@@ -60,6 +55,10 @@ class SkyTraq:
 
     BINARY_MODE = b"\xa0\xa1\x00\x03\x09\x02\x00\x0b\x0d\x0a"
     """Command to swap to binary mode"""
+    BINARY_START: bytes = b'\xA0\xA1'
+    """SkyTraq binary message start bytes"""
+    BINARY_END: bytes = b'\x0D\x0A'
+    """SkyTraq binary message end bytes"""
 
     BAUD = 9600
     """Baud rate of skytraq"""
@@ -121,7 +120,7 @@ class SkyTraq:
         if len(payload_bytes) != pl:
             raise SkyTraqError(f"payload length does not match {len(payload_bytes)} vs {pl}")
 
-        if reduce(xor, payload_bytes, 0) != checksum_byte:
+        if SkyTraq.checksum(payload_bytes) != checksum_byte:
             raise SkyTraqError("invalid checksum")
 
         try:
@@ -130,6 +129,10 @@ class SkyTraq:
             raise SkyTraqError("Error unpacking payload") from e
 
         return nav_data, payload_bytes
+
+    @staticmethod
+    def checksum(payload: bytes) -> int:
+        return reduce(xor, payload, 0)
 
     @staticmethod
     def encode_binary(message_id: int, body: Union[bytes, str]) -> bytes:
@@ -165,13 +168,9 @@ class SkyTraq:
         payload_length: bytes = (1 + len(body)).to_bytes(2)
         payload_bytes: bytearray = bytearray(msg_bytes)
         payload_bytes.extend(body)
-        # checksum gen
-        cs: int = 0
-        for n in payload_bytes:
-            cs ^= n
         # <0xA0,0xA1><PL><Message ID><Message Body><CS><0x0D,0x0A>
-        payload_bytes[0:0] = BINARY_START + payload_length
-        payload_bytes.extend(cs.to_bytes() + BINARY_END)
+        payload_bytes[0:0] = SkyTraq.BINARY_START + payload_length
+        payload_bytes.extend(SkyTraq.checksum(payload_bytes).to_bytes() + SkyTraq.BINARY_END)
         return bytes(payload_bytes)
 
     def connect(self) -> None:
