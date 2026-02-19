@@ -75,7 +75,6 @@ class SkyTraq:
     CS := 0x0b ^ 0x00 = 0x0b
     """
 
-    BINARY_MODE = b"\xa0\xa1\x00\x03\x09\x02\x00\x0b\x0d\x0a"
     """Command to swap to binary mode"""
     BINARY_START: bytes = b'\xA0\xA1'
     """SkyTraq binary message start bytes"""
@@ -87,8 +86,8 @@ class SkyTraq:
     def __init__(self, port: Path) -> None:
         """Create a SkyTraq instance associated with a specific serial interface.
 
-        Paramters
-        ---------
+        Parameters
+        ----------
         port
                 Serial port to use.
         """
@@ -107,7 +106,7 @@ class SkyTraq:
         Raises
         ------
         SkyTraqError
-            An error occured.
+            An error occurred.
 
         Returns
         -------
@@ -190,7 +189,7 @@ class SkyTraq:
     def connect(self) -> None:
         """Connect to the Skytraq receiver serial interface."""
         self._ser = Serial(str(self._port), self.BAUD, timeout=1)
-        self._ser.write(self.BINARY_MODE)  # swap to binary mode
+        self._ser.write(SkyTraq.encode_binary(0x09, b"\x02\x00"))  # swap to binary mode
 
     def disconnect(self) -> None:
         """Disconnect from the Skytraq receiver serial interface."""
