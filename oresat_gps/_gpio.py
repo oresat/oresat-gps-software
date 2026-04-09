@@ -1,66 +1,46 @@
-"""Utility class for working with gpiod."""
-
-from collections.abc import Generator
-from dataclasses import dataclass
-from pathlib import Path
+"""Utility functions for working with gpiod."""
 
 import gpiod
+from gpiod.line import Direction, Value
 
 
-@dataclass(frozen=True)
-class GpioMapping:
-    """Abstracts Gpio lines.
+def request_gpio_output(
+    chip_path: str,
+    offset: int,
+    line_name: str,
+) -> gpiod.LineRequest:
+    """Request a line from a gpiochip by numeric offset.
 
-    chip_name: path to the gpiochip the line belongs to
-    line_name: the name of the line specified in the device tree
-    offset: the numeric offset of the line within the gpio bank
-    direction: the gpio line's direction either input or output
+    Parameters
+    ----------
+    chip_path
+                Path to the gpiochip character device
+    offset
+                Numeric offset of the desired line within the gpiochip
+    line_name
+                A human-readable name for the desired line set in the device tree
+
+    Raises
+    ------
+    RuntimeError
+        If the requested line doesn't have the expected name
+
+    Returns
+    -------
+    gpiod.LineRequest
+        A request for gpiod line as an output.
+
     """
-
-    chip_path: str
-    line_name: str
-    offset: int
-    direction: gpiod.line.Direction
-
-    def request(self, consumer: str, initial_value: gpiod.line.Value) -> gpiod.LineRequest:
-        """Request the line from the gpiochip.
-
-        The LineRequest object is intended to be used as a context manager.
-
-        :example:
-        with mapping.request(consumer="gps", initial_value=gpiod.line.Value.ACTIVE) as request:
-            request.set_value(mapping.offset, gpiod.line.Value.INACTIVE)
-        """
-        return gpiod.request_lines(
-            path=self.chip_path,
-            consumer=consumer,
+    # Check if the given gpiochip device has the expected line name at the given offset
+    with gpiod.Chip(chip_path) as chip:
+        if chip.get_line_info(offset).name != line_name:
+            raise RuntimeError(f"Line {line_name} not found at offset {offset} on chip {chip_path}")
+        return chip.request_lines(
+            consumer="oresat-gps",
             config={
-                self.offset: gpiod.LineSettings(
-                    direction=self.direction,
-                    output_value=initial_value,
+                offset: gpiod.LineSettings(
+                    direction=Direction.OUTPUT,
+                    output_value=Value.INACTIVE,
                 )
             },
         )
-
-
-def generate_gpio_chips() -> Generator[str]:
-    """Scan through available gpio chips.
-
-    gpiochips are numbered non-deterministicly, so all chips must be scanned
-    """
-    for chip_path in Path("/dev").glob("gpiochip*"):
-        if gpiod.is_gpiochip_device(str(chip_path)):
-            # Gpiod expects a string
-            yield str(chip_path)
-
-
-def find_line(line_name: str, direction: gpiod.line.Direction) -> GpioMapping:
-    """Scan available gpiochips for a line by name."""
-    for chip_path in generate_gpio_chips():
-        with gpiod.Chip(chip_path) as chip:
-            offset = chip.line_offset_from_id(line_name)
-            if offset >= 0:
-                return GpioMapping(
-                    chip_path=chip_path, line_name=line_name, offset=offset, direction=direction
-                )
-    raise RuntimeError(f"Can't find {line_name} on any chip.")

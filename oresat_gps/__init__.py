@@ -1,4 +1,11 @@
-"""GPS OLAF app."""
+"""OreSat GPS application interface.
+
+This module exposes the package API (`__version__`, `main()`) and wires the
+runtime interface for the GPS service:
+- `main()` initializes OLAF, selects real or mock SkyTraq hardware, and starts
+  the service loop.
+- `/skytraq` serves the SkyTraq status/control page template.
+"""
 
 from importlib.resources import files
 from pathlib import Path
@@ -48,7 +55,3 @@ def main() -> None:
     rest_api.add_template(files('oresat_gps') / 'templates' / 'skytraq.html')
 
     olaf_run()
-
-
-if __name__ == "__main__":
-    main()

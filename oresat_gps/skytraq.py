@@ -6,10 +6,15 @@ from functools import reduce
 from operator import xor
 from pathlib import Path
 from time import sleep
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
-from olaf import Gpio
+if TYPE_CHECKING:
+    import gpiod
+
+from gpiod.line import Value
 from serial import Serial, SerialException
+
+from oresat_gps._gpio import request_gpio_output
 
 
 class NavData(NamedTuple):
@@ -52,26 +57,41 @@ class FixMode(Enum):
 
 
 class SkyTraq:
-    """SkyTraq serail driver."""
+    """SkyTraq serial driver.
+
+    skytraq binary protocol
+    -----------------------
+    The general format is detailed at https://www.skytraq.com.tw/homesite/AN0037.pdf.
+
+    | start     | payload len (PL) |         Payload             | checksum (CS) | end of    |
+    | of seq    |                  | msg id |    message body    |               | sequence  |
+    |-----------|------------------|--------|--------------------|---------------|-----------|
+    | 0xa0 0xa1 | 2 bytes          | 1 byte | =< 2**16 - 1 bytes | 1 byte        | 0x0d 0x0a |
+
+    Ex: <0xa0, 0xa1><PL><msg id><msg body><CS><0x0d, 0x0a>
+
+    The checksum is the 8-bit exclusive OR of only the payload bytes which start from Message ID.
+    For example,
+
+    CS := 0x09 ^ 0x02 = 0x0b
+    CS := 0x0b ^ 0x00 = 0x0b
+    """
 
     BINARY_MODE = b"\xa0\xa1\x00\x03\x09\x02\x00\x0b\x0d\x0a"
-    """Command to swap to binary mode"""
-
-    BAUD = 9600
-    """Baud rate of skytraq"""
+    BAUD = 115200
 
     def __init__(self, port: Path) -> None:
-        """Create a SkyTraq instance associated with a specific serial port.
+        """Create a SkyTraq instance associated with a specific serial interface.
 
         Paramters
         ---------
-        port: str
-            Serial port to use.
+        port
+                Serial port to use.
         """
         self._port = port
 
     def _read(self) -> bytes:
-        r"""Read from skytraq serial bus.
+        r"""Read from skytraq serial interface.
 
         format:
             [0xA0A1][PL][ID][P][CS][\r\n]
@@ -95,11 +115,11 @@ class SkyTraq:
         except SerialException as e:
             raise SkyTraqError("Error reading GPS line") from e
         if not line:
-            raise SkyTraqError("skytraq read serial failed")
+            raise SkyTraqError("skytraq serial read failed")
         return line
 
     def read(self) -> tuple[NavData, bytes]:
-        """Read the stream of messages from the skytraq."""
+        """Read the stream of messages from the Skytraq."""
         # See Application Note AN0037 for format
         line = self._read()
         if len(line) <= 7:
@@ -128,60 +148,76 @@ class SkyTraq:
         return nav_data, payload_bytes
 
     def connect(self) -> None:
-        """Connect to the skytraq serial bus."""
+        """Connect to the Skytraq receiver serial interface."""
         self._ser = Serial(str(self._port), self.BAUD, timeout=1)
         self._ser.write(self.BINARY_MODE)  # swap to binary mode
 
     def disconnect(self) -> None:
-        """Disconnect from the skytraq serial bus."""
+        """Disconnect from the Skytraq receiver serial interface."""
         self._ser.close()
 
     @property
     def is_connected(self) -> bool:
-        """Status of the connection to the skytraq serial bus."""
+        """Status of the Skytraq serial interface."""
         return self._ser.is_open
 
 
 class SkyTraq10(SkyTraq):
-    '''SkyTraq driver for the GPS 1.0 series boards.'''
+    """SkyTraq driver for the GPS 1.0 series boards."""
 
     def __init__(self, path: Path) -> None:
         super().__init__(path)
-        self._enable = Gpio("STQ_EN")
-        self._lna = Gpio("MAX_EN")
+        self._enable: gpiod.LineRequest = request_gpio_output(
+            chip_path="/dev/gpiochip2",
+            offset=2,
+            line_name="STQ_EN",
+        )
+        self._lna: gpiod.LineRequest = request_gpio_output(
+            chip_path="/dev/gpiochip2",
+            offset=4,
+            line_name="MAX_EN",
+        )
 
     def connect(self) -> None:
-        self._enable.high()
-        self._lna.high()
+        """Enable GPS power domain, then connect to Skytraq receiver serial interface."""
+        self._enable.set_value(self._enable.offsets[0], Value.ACTIVE)
+        self._lna.set_value(self._lna.offsets[0], Value.ACTIVE)
         super().connect()
 
     def disconnect(self) -> None:
+        """Diconnect from Skytraq receiver, disable GPS power domain."""
         super().disconnect()
-        self._lna.low()
-        self._enable.low()
+        self._lna.set_value(self._lna.offsets[0], Value.INACTIVE)
+        self._enable.set_value(self._enable.offsets[0], Value.INACTIVE)
 
 
 class SkyTraq11(SkyTraq):
-    '''SkyTraq driver for the GPS 1.1 series boards.'''
+    """SkyTraq driver for the GPS 1.1 series boards."""
 
     def __init__(self, path: Path) -> None:
         super().__init__(path)
-        self._enable = Gpio("GPS_EN")
+        self._enable: gpiod.LineRequest = request_gpio_output(
+            chip_path="/dev/gpiochip2",
+            offset=4,
+            line_name="GPS_EN",
+        )
 
     def connect(self) -> None:
-        self._enable.high()
+        """Enable GPS power domain, then connect to Skytraq receiver serial interface."""
+        self._enable.set_value(self._enable.offsets[0], Value.ACTIVE)
         super().connect()
 
     def disconnect(self) -> None:
+        """Diconnect from Skytraq receiver, disable GPS power domain."""
         super().disconnect()
-        self._enable.low()
+        self._enable.set_value(self._enable.offsets[0], Value.INACTIVE)
 
 
 class MockSkyTraq(SkyTraq):
-    '''A simulated SkyTraq driver that doesn't touch any physical hardware.
+    """A simulated SkyTraq driver that doesn't touch any physical hardware.
 
     Returns only a message of type 0xA8 - Navigation Data Message.
-    '''
+    """
 
     MOCK_DATA = (
         b"\xa0\xa1\x00\x3b\xa8\x02\x07\x08\x6a\x03\x21\x7a\x1f\x1b\x1f\x16\xf1\xb6\xe1"
