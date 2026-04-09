@@ -3,34 +3,34 @@
 Software for Linux version of the GPS card.
 
 Like all OreSat software projects it is built using OLAF (OreSat Linux App
-Framework), which it built ontop of [CANopen for Python]. See the
+Framework), which it built on top of [CANopen for Python]. See the
 [oresat-olaf repo] for more info about OLAF.
 
-## Quickstart
+## Quick Start
 
-Install dependenies
+Install dependencies
 
 ```bash
-$ pip3 install . --group dev
+pip3 install -e .[dev]
 ```
 Make a virtual CAN bus
 
 ```bash
-$ sudo ip link add dev vcan0 type vcan
-$ sudo ip link set vcan0 up
+sudo ip link add dev vcan0 type vcan
+sudo ip link set vcan0 up
 ```
 
 Run the GPS app
 
 ```bash
-$ python3 -m oresat_gps
+python3 -m oresat_gps
 ```
 
 Can select the CAN bus to use (`vcan0`, `can0`, etc) with the `-b BUS` arg.
 
 Can mock hardware by using the `-m HARDWARE` flag.
 
-- The`-m all` flag can be used to mock all hardware (CAN bus is always
+- The `-m all` flag can be used to mock all hardware (CAN bus is always
 required).
 - The `-m skytraq` flag would only mock the skytraq
 
