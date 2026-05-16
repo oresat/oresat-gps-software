@@ -1,0 +1,55 @@
+name: Gpio-sim based integration test
+
+on:
+  push:
+    branches:
+      - cullen/testing
+    pull_request:
+      - main
+
+jobs:
+  test-gpio:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+    - name: Install system deps
+      run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            autoconf-archive \
+            build-essential \
+            libglib2.0-dev \
+            libgpiod-dev \
+            libkmod-dev \
+            libmount-dev \
+            linux-modules-extra-$(uname -r) \
+    - name: Install python deps
+      run: |
+        pip install setuptools
+        pip install . --group dev 
+    - name: Insert gpio-sim module and mount configFS 
+      run: |
+        sudo modprobe gpio-sim
+        sudo mount -t configfs none /sys/kernel/config 2>/dev/null || true
+    - name: Bulid gpiod with gpio-sim bindings
+      run: |
+        git clone https://github.com/brgl/libgpiod.git
+        cd libgpiod
+        git checkout 7acbbcf7789719f577d0ddba2298167ea73c57ee # libgpiod recently migrated to Meson  
+        ./autogen.sh
+        ./configure --enable-tests --enable-bindings-python
+        make
+    - name: Run oresat-gps integration tests 
+      run : |
+        # The test assembly needs to be able to find the gpio-sim bindings, hence the environment variables.
+        # Must be run with root privileges, since normal users can't manipulate configFS
+        # Super user uses a different Python executable than the normal user.
+        # $(python -c "import sys; print(sys.executable) yields something like /opt/hostedtoolcache/Python/3.13.13/x64/bin/python.
+        # This weird shell script nonsense was chosen to avoid hardcoding the above path.
+        sudo env PYTHONPATH=./libgpiod/bindings/python/tests/ \
+                 LD_LIBRARY_PATH=./libgpiod/tests/gpiosim/.libs/ \
+                 $(python -c "import sys; print(sys.executable)") -m pytest tests/mytest.py
