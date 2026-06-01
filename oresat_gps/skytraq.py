@@ -1,18 +1,21 @@
 """SkyTraq serial driver."""
 
 import struct
+from collections.abc import Iterable
 from enum import Enum, unique
 from functools import reduce
 from operator import xor
 from pathlib import Path
 from time import sleep
-from typing import Iterable, TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 if TYPE_CHECKING:
     import gpiod
 
 from gpiod.line import Value
 from serial import Serial, SerialException
+
+from oresat_gps._gpio import request_gpio_output
 
 
 class NavData(NamedTuple):
@@ -75,10 +78,9 @@ class SkyTraq:
     CS := 0x0b ^ 0x00 = 0x0b
     """
 
-    """Command to swap to binary mode"""
-    BINARY_START: bytes = b'\xA0\xA1'
+    BINARY_START: bytes = b'\xa0\xa1'
     """SkyTraq binary message start bytes"""
-    BINARY_END: bytes = b'\x0D\x0A'
+    BINARY_END: bytes = b'\x0d\x0a'
     """SkyTraq binary message end bytes"""
 
     BAUD = 115200
@@ -189,7 +191,8 @@ class SkyTraq:
     def connect(self) -> None:
         """Connect to the Skytraq receiver serial interface."""
         self._ser = Serial(str(self._port), self.BAUD, timeout=1)
-        self._ser.write(SkyTraq.encode_binary(0x09, b"\x02\x00"))  # swap to binary mode
+        # swap to binary mode
+        self._ser.write(SkyTraq.encode_binary(0x09, b"\x02\x00"))
 
     def disconnect(self) -> None:
         """Disconnect from the Skytraq receiver serial interface."""
