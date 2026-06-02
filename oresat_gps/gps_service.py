@@ -65,6 +65,7 @@ class GpsService(Service):
             nav_data, raw = self._skytraq.read()
         except SkyTraqError as e:
             logger.debug(e)
+            return
 
         skytraq_rec = self.node.od["skytraq"]
 
