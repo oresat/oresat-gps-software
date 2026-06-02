@@ -196,14 +196,14 @@ class SkyTraq:
         ValueError
             The message is missing its sequence start or end, or length or checksum does not match.
         """
-        if not data.startswith(cls.BINARY_START) or not data.endswith(cls.BINARY_END):
+        if not data[:2] == cls.BINARY_START or not data[-2:] == cls.BINARY_END:
             raise ValueError("invalid binary message")
-        inner = data[len(cls.BINARY_START) : -len(cls.BINARY_END)]
+        inner = data[2:-2]
         payload_len = inner[0:2]
         payload = inner[2:-1]
         csum = inner[-1]
-        if int.from_bytes(payload_len, byteorder="big") != len(payload):
-            raise ValueError(f"payload length does not match {payload_len} vs {len(payload)}")
+        if struct.unpack(">H", payload_len)[0] != len(payload):
+            raise ValueError(f"payload length does not match {payload_len!r} vs {len(payload)}")
         if csum != cls.checksum(payload):
             raise ValueError("invalid checksum")
         return payload
