@@ -78,6 +78,10 @@ ignore = [
     "PLR2004",  # Magic value used in comparison
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]
+
+
 [[tool.mypy.overrides]]
 module = "olaf"
 ignore_missing_imports = true
