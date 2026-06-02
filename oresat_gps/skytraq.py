@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     import gpiod
 
 from gpiod.line import Value
+from olaf import logger
 from serial import Serial, SerialException
 
 from oresat_gps._gpio import request_gpio_output
@@ -127,30 +128,18 @@ class SkyTraq:
         """Read the stream of messages from the Skytraq."""
         # See Application Note AN0037 for format
         line = self._read()
-        if len(line) <= 7:
-            raise SkyTraqError("skytraq message length is too short")
-
-        payload_len_bytes = line[2:4]
-        payload_bytes = line[4:-3]
-        checksum_byte = line[-3]
-
-        # validate payload length in line
         try:
-            (pl,) = struct.unpack(">H", payload_len_bytes)
-        except struct.error as e:
-            raise SkyTraqError("skytraq payload length unpack failed") from e
-        if len(payload_bytes) != pl:
-            raise SkyTraqError(f"payload length does not match {len(payload_bytes)} vs {pl}")
-
-        if self.checksum(payload_bytes) != checksum_byte:
-            raise SkyTraqError("invalid checksum")
+            payload = self.decode_binary(line)
+        except ValueError as e:
+            logger.error("Error decoding payload: %s", e)
+            raise SkyTraqError("Error decoding payload") from e
 
         try:
-            nav_data = NavData(*struct.unpack(">3BHI2i2I5H6i", payload_bytes))
+            nav_data = NavData(*struct.unpack(">3BHI2i2I5H6i", payload))
         except (struct.error, TypeError) as e:
             raise SkyTraqError("Error unpacking payload") from e
 
-        return nav_data, payload_bytes
+        return nav_data, payload
 
     @staticmethod
     def checksum(payload: Iterable[int]) -> int:
@@ -187,6 +176,37 @@ class SkyTraq:
         payload_bytes[0:0] = cls.BINARY_START + payload_length
         payload_bytes += cs + cls.BINARY_END
         return bytes(payload_bytes)
+
+    @classmethod
+    def decode_binary(cls, data: bytes) -> bytes:
+        """Decode a SkyTraq binary message and return the payload.
+
+        Parameters
+        ----------
+        data
+            The encoded message.
+
+        Returns
+        -------
+        bytes
+            The decoded payload.
+
+        Raises
+        ------
+        ValueError
+            The message is missing its sequence start or end, or length or checksum does not match.
+        """
+        if not data[:2] == cls.BINARY_START or not data[-2:] == cls.BINARY_END:
+            raise ValueError("invalid binary message")
+        inner = data[2:-2]
+        payload_len = inner[0:2]
+        payload = inner[2:-1]
+        csum = inner[-1]
+        if struct.unpack(">H", payload_len)[0] != len(payload):
+            raise ValueError(f"payload length does not match {payload_len!r} vs {len(payload)}")
+        if csum != cls.checksum(payload):
+            raise ValueError("invalid checksum")
+        return payload
 
     def connect(self) -> None:
         """Connect to the Skytraq receiver serial interface."""
