@@ -126,7 +126,12 @@ class GpsService(Service):
 
     def _skytraq_power_on(self) -> None:
         logger.info("turning SkyTraq on")
-        self._skytraq.connect()
+        try:
+            self._skytraq.connect()
+        except SkyTraqError as e:
+            logger.error("Error connecting to SkyTraq: %s", e)
+            self._skytraq.disconnect()
+            return
         self._state = GpsState.SEARCHING
 
     def _skytraq_power_off(self) -> None:

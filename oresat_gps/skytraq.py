@@ -83,6 +83,8 @@ class SkyTraq:
     """SkyTraq binary message start bytes"""
     BINARY_END: bytes = b'\x0d\x0a'
     """SkyTraq binary message end bytes"""
+    MSG_ID_ACK = 0x83
+    MSG_ID_NACK = 0x84
 
     BAUD = 115200
 
@@ -95,6 +97,44 @@ class SkyTraq:
                 Serial port to use.
         """
         self._port = port
+
+    def _check_for_ack(self, expected_msg_id: int, read_count: int = 10) -> bool:
+        """Read and check for ACK/NACK.
+
+        This is called after sending a command.
+
+        Parameters
+        ----------
+        expected_msg_id
+            The expected message ID for the previously sent message.
+        read_count
+            The number of attempts to look for ACK/NACK.
+
+        Returns
+        -------
+        bool
+            True for ACK, False for NACK.
+
+        Raises
+        ------
+        SkyTraqError
+            Incorrect or missing ACK or NACK
+        """
+        for _ in range(read_count):
+            raw = self._read()
+            try:
+                payload = self.decode_binary(raw)
+            except ValueError:
+                continue
+            msg_id = payload[0]
+            if msg_id == self.MSG_ID_ACK:
+                if payload[1] != expected_msg_id:
+                    raise SkyTraqError("ACK for wrong message: {payload[1]:#x")
+                return True
+            if msg_id == self.MSG_ID_NACK:
+                logger.warning("NACK for %#x", expected_msg_id)
+                return False
+        raise SkyTraqError("No ACK or NACK received")
 
     def _read(self) -> bytes:
         r"""Read from skytraq serial interface.
@@ -209,10 +249,19 @@ class SkyTraq:
         return payload
 
     def connect(self) -> None:
-        """Connect to the Skytraq receiver serial interface."""
+        """Connect to the Skytraq receiver serial interface.
+
+        Raises
+        ------
+        SkyTraqError
+            Error initializing the SkyTraq
+        """
         self._ser = Serial(str(self._port), self.BAUD, timeout=1)
         # swap to binary mode
         self._ser.write(SkyTraq.encode_binary(0x09, b"\x02\x00"))
+        if not self._check_for_ack(0x09):
+            logger.error("No ACK for Binary mode")
+            raise SkyTraqError("Binary mode not acknowledged")
 
     def disconnect(self) -> None:
         """Disconnect from the Skytraq receiver serial interface."""
