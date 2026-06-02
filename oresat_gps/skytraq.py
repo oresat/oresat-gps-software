@@ -157,19 +157,19 @@ class SkyTraq:
             The bytes from the body. The first byte is the message the rest are the payload bytes.
         """
         try:
-            line = self._ser.readline()
+            self._ser.read_until(self.BINARY_START)
+            payload_len_raw = self._ser.read(2)
+            payload_len = int.from_bytes(payload_len_raw, byteorder="big")
+            remaining = self._ser.read(payload_len + 3)
+            return self.BINARY_START + payload_len_raw + remaining
         except SerialException as e:
             raise SkyTraqError("Error reading GPS line") from e
-        if not line:
-            raise SkyTraqError("skytraq serial read failed")
-        return line
 
     def read(self) -> tuple[NavData, bytes]:
-        """Read the stream of messages from the Skytraq."""
-        # See Application Note AN0037 for format
-        line = self._read()
+        """Read a message from the SkyTraq."""
+        msg = self._read()
         try:
-            payload = self.decode_binary(line)
+            payload = self.decode_binary(msg)
         except ValueError as e:
             logger.error("Error decoding payload: %s", e)
             raise SkyTraqError("Error decoding payload") from e
