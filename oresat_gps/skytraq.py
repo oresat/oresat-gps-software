@@ -122,9 +122,9 @@ class SkyTraq:
         """
         for _ in range(read_count):
             raw = self._read()
-            try:
-                payload = self.decode_binary(raw)
-            except ValueError:
+            csum = raw[-1]
+            payload = raw[:-1]
+            if csum != self.checksum(payload):
                 continue
             msg_id = payload[0]
             if msg_id == self.MSG_ID_ACK:
@@ -154,25 +154,42 @@ class SkyTraq:
         Returns
         -------
         bytes
-            The bytes from the body. The first byte is the message the rest are the payload bytes.
+            The payload bytes and checksum byte.
+
+        Raises
+        ------
+        SkyTraqError
+            An error occurred on the serial read or the packet is invalid.
         """
         try:
             self._ser.read_until(self.BINARY_START)
             payload_len_raw = self._ser.read(2)
             payload_len = int.from_bytes(payload_len_raw, byteorder="big")
             remaining = self._ser.read(payload_len + 3)
-            return self.BINARY_START + payload_len_raw + remaining
+            if remaining[-2:] != self.BINARY_END:
+                raise SkyTraqError("Invalid binary message")
+            return remaining[:-2]
         except SerialException as e:
             raise SkyTraqError("Error reading GPS line") from e
 
     def read(self) -> tuple[NavData, bytes]:
-        """Read a message from the SkyTraq."""
+        """Read a message from the SkyTraq.
+
+        Returns
+        -------
+        tuple[NavData, bytes]
+            The Navigation Data and the raw data.
+
+        Raises
+        ------
+        SkyTraqError
+            Invalid checksum or error unpacking.
+        """
         msg = self._read()
-        try:
-            payload = self.decode_binary(msg)
-        except ValueError as e:
-            logger.error("Error decoding payload: %s", e)
-            raise SkyTraqError("Error decoding payload") from e
+        csum = msg[-1]
+        payload = msg[:-1]
+        if csum != self.checksum(payload):
+            raise SkyTraqError("Invalid checksum")
 
         try:
             nav_data = NavData(*struct.unpack(">3BHI2i2I5H6i", payload))
@@ -216,37 +233,6 @@ class SkyTraq:
         payload_bytes[0:0] = cls.BINARY_START + payload_length
         payload_bytes += cs + cls.BINARY_END
         return bytes(payload_bytes)
-
-    @classmethod
-    def decode_binary(cls, data: bytes) -> bytes:
-        """Decode a SkyTraq binary message and return the payload.
-
-        Parameters
-        ----------
-        data
-            The encoded message.
-
-        Returns
-        -------
-        bytes
-            The decoded payload.
-
-        Raises
-        ------
-        ValueError
-            The message is missing its sequence start or end, or length or checksum does not match.
-        """
-        if not data[:2] == cls.BINARY_START or not data[-2:] == cls.BINARY_END:
-            raise ValueError("invalid binary message")
-        inner = data[2:-2]
-        payload_len = inner[0:2]
-        payload = inner[2:-1]
-        csum = inner[-1]
-        if struct.unpack(">H", payload_len)[0] != len(payload):
-            raise ValueError(f"payload length does not match {payload_len!r} vs {len(payload)}")
-        if csum != cls.checksum(payload):
-            raise ValueError("invalid checksum")
-        return payload
 
     def connect(self) -> None:
         """Connect to the Skytraq receiver serial interface.

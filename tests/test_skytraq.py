@@ -28,13 +28,6 @@ def test_encode_binary(msg_id: int, body: bytes, expected: bytes) -> None:
     assert SkyTraq.encode_binary(msg_id, body) == expected
 
 
-@pytest.mark.parametrize(("raw", "expected"), DECODE_CASES)
-def test_decode_binary(raw: bytes, expected: bytes) -> None:
-    """Test the SkyTraq binary decoder."""
-    payload = SkyTraq.decode_binary(raw)
-    assert payload == expected
-
-
 @pytest.fixture
 def loopback_skytraq() -> Generator[SkyTraq, Any, None]:
     """Pyserial loopback fixture."""
