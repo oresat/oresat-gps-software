@@ -1,7 +1,6 @@
 """Tests for the SkyTraq module."""
 
 from collections.abc import Generator
-from typing import Any
 
 import pytest
 import serial
@@ -29,7 +28,7 @@ def test_encode_binary(msg_id: int, body: bytes, expected: bytes) -> None:
 
 
 @pytest.fixture
-def loopback_skytraq() -> Generator[SkyTraq, Any, None]:
+def loopback_skytraq() -> Generator[SkyTraq]:
     """Pyserial loopback fixture."""
     gps = SkyTraq.__new__(SkyTraq)
     gps._ser = serial.serial_for_url("loop://", timeout=1)  # noqa: SLF001
