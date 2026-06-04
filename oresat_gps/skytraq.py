@@ -83,6 +83,8 @@ class SkyTraq:
     """SkyTraq binary message start bytes"""
     BINARY_END: bytes = b'\x0d\x0a'
     """SkyTraq binary message end bytes"""
+    MSG_ID_ACK = 0x83
+    MSG_ID_NACK = 0x84
 
     BAUD = 115200
 
@@ -95,6 +97,44 @@ class SkyTraq:
                 Serial port to use.
         """
         self._port = port
+
+    def _check_for_ack(self, expected_msg_id: int, read_count: int = 10) -> bool:
+        """Read and check for ACK/NACK.
+
+        This is called after sending a command.
+
+        Parameters
+        ----------
+        expected_msg_id
+            The expected message ID for the previously sent message.
+        read_count
+            The number of attempts to look for ACK/NACK.
+
+        Returns
+        -------
+        bool
+            True for ACK, False for NACK.
+
+        Raises
+        ------
+        SkyTraqError
+            Incorrect or missing ACK or NACK
+        """
+        for _ in range(read_count):
+            raw = self._read()
+            csum = raw[-1]
+            payload = raw[:-1]
+            if csum != self.checksum(payload):
+                continue
+            msg_id = payload[0]
+            if msg_id == self.MSG_ID_ACK:
+                if payload[1] != expected_msg_id:
+                    raise SkyTraqError("ACK for wrong message: {payload[1]:#x")
+                return True
+            if msg_id == self.MSG_ID_NACK:
+                logger.warning("NACK for %#x", expected_msg_id)
+                return False
+        raise SkyTraqError("No ACK or NACK received")
 
     def _read(self) -> bytes:
         r"""Read from skytraq serial interface.
@@ -114,25 +154,42 @@ class SkyTraq:
         Returns
         -------
         bytes
-            The bytes from the body. The first byte is the message the rest are the payload bytes.
+            The payload bytes and checksum byte.
+
+        Raises
+        ------
+        SkyTraqError
+            An error occurred on the serial read or the packet is invalid.
         """
         try:
-            line = self._ser.readline()
+            self._ser.read_until(self.BINARY_START)
+            payload_len_raw = self._ser.read(2)
+            payload_len = int.from_bytes(payload_len_raw, byteorder="big")
+            remaining = self._ser.read(payload_len + 3)
+            if remaining[-2:] != self.BINARY_END:
+                raise SkyTraqError("Invalid binary message")
+            return remaining[:-2]
         except SerialException as e:
             raise SkyTraqError("Error reading GPS line") from e
-        if not line:
-            raise SkyTraqError("skytraq serial read failed")
-        return line
 
     def read(self) -> tuple[NavData, bytes]:
-        """Read the stream of messages from the Skytraq."""
-        # See Application Note AN0037 for format
-        line = self._read()
-        try:
-            payload = self.decode_binary(line)
-        except ValueError as e:
-            logger.error("Error decoding payload: %s", e)
-            raise SkyTraqError("Error decoding payload") from e
+        """Read a message from the SkyTraq.
+
+        Returns
+        -------
+        tuple[NavData, bytes]
+            The Navigation Data and the raw data.
+
+        Raises
+        ------
+        SkyTraqError
+            Invalid checksum or error unpacking.
+        """
+        msg = self._read()
+        csum = msg[-1]
+        payload = msg[:-1]
+        if csum != self.checksum(payload):
+            raise SkyTraqError("Invalid checksum")
 
         try:
             nav_data = NavData(*struct.unpack(">3BHI2i2I5H6i", payload))
@@ -177,42 +234,20 @@ class SkyTraq:
         payload_bytes += cs + cls.BINARY_END
         return bytes(payload_bytes)
 
-    @classmethod
-    def decode_binary(cls, data: bytes) -> bytes:
-        """Decode a SkyTraq binary message and return the payload.
-
-        Parameters
-        ----------
-        data
-            The encoded message.
-
-        Returns
-        -------
-        bytes
-            The decoded payload.
+    def connect(self) -> None:
+        """Connect to the Skytraq receiver serial interface.
 
         Raises
         ------
-        ValueError
-            The message is missing its sequence start or end, or length or checksum does not match.
+        SkyTraqError
+            Error initializing the SkyTraq
         """
-        if not data[:2] == cls.BINARY_START or not data[-2:] == cls.BINARY_END:
-            raise ValueError("invalid binary message")
-        inner = data[2:-2]
-        payload_len = inner[0:2]
-        payload = inner[2:-1]
-        csum = inner[-1]
-        if struct.unpack(">H", payload_len)[0] != len(payload):
-            raise ValueError(f"payload length does not match {payload_len!r} vs {len(payload)}")
-        if csum != cls.checksum(payload):
-            raise ValueError("invalid checksum")
-        return payload
-
-    def connect(self) -> None:
-        """Connect to the Skytraq receiver serial interface."""
         self._ser = Serial(str(self._port), self.BAUD, timeout=1)
         # swap to binary mode
         self._ser.write(SkyTraq.encode_binary(0x09, b"\x02\x00"))
+        if not self._check_for_ack(0x09):
+            logger.error("No ACK for Binary mode")
+            raise SkyTraqError("Binary mode not acknowledged")
 
     def disconnect(self) -> None:
         """Disconnect from the Skytraq receiver serial interface."""
