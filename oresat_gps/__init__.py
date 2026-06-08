@@ -35,8 +35,8 @@ def main() -> None:
     mock_args = [i.lower() for i in args.mock_hw]
     mock_skytraq = "skytraq" in mock_args or "all" in mock_args
 
-    app.od["versions"]["sw_version"].value = __version__
-    hw_version = app.od["versions"]["hw_version"].value
+    app.od["versions"]["sw_version"].value = __version__  # type: ignore[index]
+    hw_version = app.od["versions"]["hw_version"].value  # type: ignore[index]
 
     if mock_skytraq:
         logger.debug("Mocking the skytraq.")
@@ -52,6 +52,6 @@ def main() -> None:
 
     app.add_service(GpsService(skytraq))
 
-    rest_api.add_template(files('oresat_gps') / 'templates' / 'skytraq.html')
+    rest_api.add_template(str(files('oresat_gps') / 'templates' / 'skytraq.html'))
 
     olaf_run()

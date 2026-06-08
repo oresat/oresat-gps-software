@@ -71,6 +71,7 @@ ignore = [
     "EM102", # Exception must not use an f-string literal
     "FIX",  # flake8-fixme
     "TD",  # flake8-todos
+    "TC006", # Add quotes to type expression in `typing.cast()`
     # This might be good to turn on later, right now I'm on the fence about it
     "TRY003",  # Avoid specifying long messages outside the exception class
     # Another one that might be good later but for now is too argessive. Many of
