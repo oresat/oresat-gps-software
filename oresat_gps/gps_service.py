@@ -7,7 +7,9 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum, unique
 from os import geteuid
 from time import CLOCK_REALTIME, clock_settime
+from typing import cast
 
+from canopen.objectdictionary import ODRecord, ODVariable
 from olaf import NetworkError, Service, logger
 
 from .skytraq import FixMode, SkyTraq, SkyTraqError
@@ -37,9 +39,13 @@ class GpsService(Service):
     def on_start(self) -> None:
         self.node.add_sdo_callbacks("status", None, self._on_read, self._on_write)
 
-        self.is_syncd_obj = self.node.od["time_syncd"]
+        # Dealing with the ObjectDictionary type annotations is really quite annoying, there's
+        # got to be a better way than casting my problems away.
+        self._is_syncd = cast(ODVariable, self.node.od["time_syncd"])
+        self._skytraq_rec = cast(ODRecord, self.node.od["skytraq"])
+
         # make sure the flag for the time has been syncd is set to false
-        self.is_syncd_obj.value = False
+        self._is_syncd.value = False
 
         self._skytraq_power_on()
 
@@ -67,13 +73,11 @@ class GpsService(Service):
             logger.debug(e)
             return
 
-        skytraq_rec = self.node.od["skytraq"]
-
-        skytraq_rec["packet_count"].value += 1
-        skytraq_rec["last_packet"].value = raw
+        self._skytraq_rec["packet_count"].value += 1  # type: ignore[operator]
+        self._skytraq_rec["last_packet"].value = raw  # type: ignore[assignment]
 
         if nav_data.fix_mode == FixMode.NO_FIX.value:
-            skytraq_rec["fix_mode"].value = FixMode.NO_FIX.value
+            self._skytraq_rec["fix_mode"].value = FixMode.NO_FIX.value
         else:
             # GPS time is weeks and seconds since midnight 1980-1-6 (with the skytraq tow field
             # being centiseconds, see AN0037 Navigation Data Message), except that UTC suffers from
@@ -88,21 +92,21 @@ class GpsService(Service):
             )
 
             # sync clock if it hasn't been syncd yet
-            if not self.is_syncd_obj.value and geteuid() == 0:
+            if not self._is_syncd.value and geteuid() == 0:
                 clock_settime(CLOCK_REALTIME, dt.timestamp())
                 logger.info("set time based off of skytraq time")
-                self.is_syncd_obj.value = True
+                self._is_syncd.value = True
 
             # add all skytraq data to OD
             for key, value in nav_data._asdict().items():
                 if key == "message_id":
                     continue
-                skytraq_rec[key].value = value
+                self._skytraq_rec[key].value = value
 
             ms_since_midnight = (((((dt.hour * 60) + dt.minute) * 60) + dt.second) * 1000) + (
                 dt.microsecond // 1000
             )
-            skytraq_rec["time_since_midnight"].value = ms_since_midnight
+            self._skytraq_rec["time_since_midnight"].value = ms_since_midnight
 
             # send gps tpdos
             try:
@@ -119,7 +123,7 @@ class GpsService(Service):
         else:
             self._state = GpsState.SEARCHING
 
-    def on_loop_error(self, error: str) -> None:
+    def on_loop_error(self, error: Exception) -> None:
         self._skytraq_power_off()
         self._state = GpsState.ERROR
         logger.exception(error)
