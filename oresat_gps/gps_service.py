@@ -133,7 +133,7 @@ class GpsService(Service):
         try:
             self._skytraq.connect()
         except SkyTraqError as e:
-            logger.error("Error connecting to SkyTraq: %s", e)
+            logger.exception(f"Error connecting to SkyTraq: {e}")
             self._skytraq.disconnect()
             return
         self._state = GpsState.SEARCHING

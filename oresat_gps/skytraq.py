@@ -121,7 +121,11 @@ class SkyTraq:
             Incorrect or missing ACK or NACK
         """
         for _ in range(read_count):
-            raw = self._read()
+            try:
+                raw = self._read()
+            except SkyTraqError as e:
+                logger.error(f"Error reading ACK: {e}")
+                continue
             csum = raw[-1]
             payload = raw[:-1]
             if csum != self.checksum(payload):
@@ -129,10 +133,10 @@ class SkyTraq:
             msg_id = payload[0]
             if msg_id == self.MSG_ID_ACK:
                 if payload[1] != expected_msg_id:
-                    raise SkyTraqError("ACK for wrong message: {payload[1]:#x")
+                    raise SkyTraqError(f"ACK for wrong message: {payload[1]:#x}")
                 return True
             if msg_id == self.MSG_ID_NACK:
-                logger.warning("NACK for %#x", expected_msg_id)
+                logger.warning(f"NACK for {expected_msg_id:#x}")
                 return False
         raise SkyTraqError("No ACK or NACK received")
 
@@ -244,7 +248,12 @@ class SkyTraq:
         """
         self._ser = Serial(str(self._port), self.BAUD, timeout=1)
         # swap to binary mode
-        self._ser.write(SkyTraq.encode_binary(0x09, b"\x02\x00"))
+        # for mysterious reasons this only seems to work by clearing the buffer,
+        # sending it, waiting, and then doing that a second time
+        for _ in range(2):
+            self._ser.read(self._ser.in_waiting)
+            self._ser.write(SkyTraq.encode_binary(0x09, b"\x02\x00"))
+            sleep(0.1)
         if not self._check_for_ack(0x09):
             logger.error("No ACK for Binary mode")
             raise SkyTraqError("Binary mode not acknowledged")
