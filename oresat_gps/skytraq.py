@@ -123,7 +123,7 @@ class SkyTraq:
         for _ in range(read_count):
             try:
                 raw = self._read()
-            except SkyTraqError:
+            except SkyTraqError as e:
                 logger.error(f"Error reading ACK: {e}")
                 continue
             csum = raw[-1]
